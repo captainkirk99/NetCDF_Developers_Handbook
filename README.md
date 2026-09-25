@@ -1,5 +1,7 @@
 # The NetCDF Developer's Handbook
 
+[![CI](https://github.com/captainkirk99/NetCDF_Developers_Handbook/actions/workflows/ci.yml/badge.svg)](https://github.com/captainkirk99/NetCDF_Developers_Handbook/actions/workflows/ci.yml)
+
 Example programs for the books by Edward Hartnett:
 
 <table>
