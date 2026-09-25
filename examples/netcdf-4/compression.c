@@ -325,21 +325,39 @@ void read_compressed_file(CompressionTest *test, float *original_data) {
     free(data);
 }
 
-/* Check whether Zstandard is available at runtime by attempting to create
- * a tiny file with the zstd filter applied. */
+/* Check whether Zstandard is available at runtime by writing a tiny file
+ * with the zstd filter applied, then reopening it and reading it back. The
+ * library may accept nc_def_var_zstandard() when it was built with zstd
+ * support even if the HDF5 filter plugin is not installed, so the round trip
+ * is what proves the filter can actually be used. */
 int check_zstd_support(void) {
     int ncid, varid, dimid;
     int retval;
     int supported = 0;
+    float val_out = 0, val_in = 1.5;
+    int zstd_out = 0, zstd_level_out = 0;
 
     if ((retval = nc_create("zstd_probe.nc", NC_CLOBBER|NC_NETCDF4, &ncid)))
         return 0;
 
     if ((retval = nc_def_dim(ncid, "x", 1, &dimid)) == NC_NOERR &&
-        (retval = nc_def_var(ncid, "v", NC_FLOAT, 1, &dimid, &varid)) == NC_NOERR)
-        retval = nc_def_var_zstandard(ncid, varid, 3);
+        (retval = nc_def_var(ncid, "v", NC_FLOAT, 1, &dimid, &varid)) == NC_NOERR &&
+        (retval = nc_def_var_zstandard(ncid, varid, 3)) == NC_NOERR &&
+        (retval = nc_enddef(ncid)) == NC_NOERR)
+        retval = nc_put_var_float(ncid, varid, &val_in);
 
-    nc_close(ncid);
+    if (nc_close(ncid) != NC_NOERR)
+        retval = NC_EFILTER;
+
+    if (retval == NC_NOERR &&
+        (retval = nc_open("zstd_probe.nc", NC_NOWRITE, &ncid)) == NC_NOERR) {
+        if ((retval = nc_inq_varid(ncid, "v", &varid)) == NC_NOERR &&
+            (retval = nc_inq_var_zstandard(ncid, varid, &zstd_out, &zstd_level_out)) == NC_NOERR &&
+            (retval = nc_get_var_float(ncid, varid, &val_out)) == NC_NOERR &&
+            (!zstd_out || zstd_level_out != 3 || val_out != val_in))
+            retval = NC_EFILTER;
+        nc_close(ncid);
+    }
     remove("zstd_probe.nc");
 
     supported = (retval == NC_NOERR);
