@@ -29,6 +29,7 @@ jobs:
 
       - name: Run Doxygen
         run: |
+          mkdir -p build/doxygen
           doxygen Doxyfile
           mkdir -p build/doxygen/html/docs
           cp -r docs/images build/doxygen/html/docs/

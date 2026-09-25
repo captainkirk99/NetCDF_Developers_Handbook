@@ -32,6 +32,7 @@ examples were moved here from the
 [NetCDF Expansion Pack](https://github.com/Intelligent-Data-Design-Inc/NEP);
 see [docs/roadmap.md](docs/roadmap.md) for how that was done and
 [docs/nep-handoff.md](docs/nep-handoff.md) for the list of moved files.
+Release notes: [docs/release-notes-v1.0.md](docs/release-notes-v1.0.md).
 
 ## See also: Earth Observation in Practice
 
