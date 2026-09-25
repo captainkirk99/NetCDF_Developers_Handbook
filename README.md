@@ -45,10 +45,12 @@ The examples in this repository are not related to that book.
 ## Building and running the examples
 
 Requirements: CMake 3.16 or later, a C compiler, and netCDF-C (with HDF5)
-installed so that `nc-config` can be found.
+installed so that `nc-config` can be found. For the Fortran examples you also
+need a Fortran compiler and netCDF-Fortran (`nf-config`).
 
 ```sh
-cmake -S . -B build -DNETCDF_PREFIX=/usr/local/netcdf-c -DHDF5_PREFIX=/usr/local/hdf5-2.1.1
+cmake -S . -B build -DNETCDF_PREFIX=/usr/local/netcdf-c -DHDF5_PREFIX=/usr/local/hdf5-2.1.1 \
+      -DNETCDF_FORTRAN_PREFIX=/usr/local/netcdf-fortran
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
@@ -57,6 +59,11 @@ Omit `NETCDF_PREFIX` and `HDF5_PREFIX` if `nc-config` is already on your
 `PATH` (for example when netCDF is installed from your distribution's
 packages). `ctest` runs every example that does not need an external data
 file.
+
+The Fortran examples (`examples/f_classic`, `examples/f_netcdf-4`) are built
+whenever `nf-config` is found, next to `nc-config` or under
+`NETCDF_FORTRAN_PREFIX`; otherwise they are skipped with a status message.
+Pass `-DENABLE_FORTRAN=OFF` to leave them out entirely.
 
 The `examples/performance` programs `bzip2`, `lz4` and `zstandard` need the
 matching HDF5 filter plugin. They build everywhere but print a "skipping"
