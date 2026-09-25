@@ -23,9 +23,11 @@ performance tuning, NcZarr, OPeNDAP and parallel I/O. Each example is a small
 standalone program that writes (and usually reads back) a netCDF file, so it
 can be run directly to see the concepts from the book in action.
 
-The examples are being moved here from the
+[examples/README.md](examples/README.md) lists every program and what it
+demonstrates. The examples were moved here from the
 [NetCDF Expansion Pack](https://github.com/Intelligent-Data-Design-Inc/NEP);
-see [docs/roadmap.md](docs/roadmap.md) for the plan and current status.
+see [docs/roadmap.md](docs/roadmap.md) for how that was done and
+[docs/nep-handoff.md](docs/nep-handoff.md) for the list of moved files.
 
 ## See also: Earth Observation in Practice
 
