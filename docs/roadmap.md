@@ -34,15 +34,14 @@ examples build and run.
 
 | NEP directory | Language | Programs | Notes |
 |---|---|---|---|
-| `examples/classic` | C | quickstart, simple_2D, coord, coord_vars, var4d, unlimited_dim, size_limits, dump_classic_metadata | dump_classic_metadata reads the file written by coord_vars and is diffed against `expected_output/` |
-| `examples/netcdf-4` | C | simple_nc4, groups, compression, chunking_performance, user_types, multi_unlimited, format_variants, dump_nc4_metadata | dump/format/groups have shell wrappers and expected output |
+| `examples/classic` | C | quickstart, simple_2D, coord, coord_vars, var4d, unlimited_dim, size_limits, dump_classic_metadata | dump_classic_metadata reads the file written by coord_vars |
+| `examples/netcdf-4` | C | simple_nc4, groups, compression, chunking_performance, user_types, multi_unlimited, format_variants, dump_nc4_metadata | dump_nc4_metadata reads the file written by user_types; compression needs netCDF-C >= 4.9 headers (zstd skipped at runtime if the plugin is absent) |
 | `examples/performance` | C | deflate, bzip2, lz4, szip, zstandard, chunking, cache_tuning, endianness, fill_values | Filter examples need the matching HDF5 filter plugin; `lossless.c` and `quantize.c` stay in NEP (use `nep.h`). Only sources move, not CSV results or plot scripts |
 | `examples/nczarr` | C, Fortran | nczarr_simple, nczarr_chunking, nczarr_compression, nczarr_enhanced (+ `f_` versions) | Requires netcdf-c built with NcZarr |
 | `examples/f_classic` | Fortran | f_ versions of the classic examples | Requires netcdf-fortran |
 | `examples/f_netcdf-4` | Fortran | f_ versions of the netcdf-4 examples | Requires netcdf-fortran |
 | `examples/opendap` | C, Fortran | opendap_simple, opendap_subset, opendap_constraint (+ `f_` versions) | Needs network access to a remote server; build-only in CI |
 | `examples/parallelIO` | C, Fortran | square16_par, f_square16_par | Needs MPI and parallel netcdf-c; optional, off by default |
-| `examples/expected_output` | text | expected `.txt` output for the dump/format/groups wrappers | Only the files referenced by moved examples |
 
 Not moved: `examples/pdb`, `examples/dicom`, `examples/viz`.
 
@@ -59,8 +58,10 @@ Not moved: `examples/pdb`, `examples/dicom`, `examples/viz`.
   OFF), `ENABLE_PARALLEL` (default OFF), `ENABLE_PERFORMANCE_FILTERS`
   (bzip2/lz4/szip/zstandard only when the plugin is found).
 - Each runnable example is registered with `add_test()` so `ctest` runs it;
-  the existing `test_*.sh` wrappers are kept for the examples that need a
-  producer step or an expected-output diff. No new test code is written.
+  examples that read a file written by another example declare a ctest
+  `DEPENDS` on it. NEP's `test_*.sh` wrappers, `validate_cdl.sh` and
+  `expected_output/` are not moved: passing means the example exits 0. No
+  test code is written.
 - CI is GitHub Actions on `ubuntu-latest`, using apt `libnetcdf-dev`,
   `libhdf5-dev` and `libnetcdff-dev`. Data-file and network examples are
   built but not run.
@@ -74,14 +75,11 @@ iterated on while the rest of the sprint proceeds), repo builds with CMake,
 `classic/` and `netcdf-4/` C examples build and run locally against
 `/usr/local/netcdf-c`, GitHub Actions runs them on every push/PR.
 
-#### Sprint 2 - Performance examples and expected-output wrappers
+#### Sprint 2 - Performance examples
 
 - Move `performance/*.c` (minus `lossless.c`, `quantize.c`) and their
   `CMakeLists.txt`; add filter-plugin detection so bzip2/lz4/szip/zstandard
   build only when available and are skipped cleanly otherwise.
-- Move `expected_output/` files referenced by the classic/netcdf-4 wrappers
-  (if not already done in Sprint 1) and confirm the wrapper scripts pass under
-  `ctest`.
 - Set `HDF5_PLUGIN_PATH` in the test environment; document in
   `examples/README.md` how to install the filter plugins.
 - CI: add a job that installs the plugin packages available on Ubuntu and runs
@@ -89,7 +87,7 @@ iterated on while the rest of the sprint proceeds), repo builds with CMake,
 
 #### Sprint 3 - Fortran examples
 
-- Move `f_classic/`, `f_netcdf-4/` and their wrappers; add `nf-config`
+- Move `f_classic/`, `f_netcdf-4/`; add `nf-config`
   detection and the `ENABLE_FORTRAN` option.
 - Verify locally (requires installing netcdf-fortran against
   `/usr/local/netcdf-c`) and in CI with `libnetcdff-dev` and `gfortran`.
@@ -133,20 +131,16 @@ system, CI.
      just a program list plus `add_test()` lines.
    - `.gitignore` additions for `build/` and `*.nc`.
 3. **Move classic C examples**
-   - Copy `classic/*.c`, `classic/test_*.sh` and the referenced
-     `expected_output/*.txt` from `~/NEP/examples`, unchanged apart from
-     removing any NEP-specific include paths.
-   - Adapt `classic/CMakeLists.txt` to the shared logic; register each
-     program with `add_test()`, wrappers used where NEP uses them
-     (`test_coord.sh`, `test_quickstart.sh`, `test_dump_classic_metadata.sh`).
+   - Copy `classic/*.c` from `~/NEP/examples`, unchanged.
+   - Rewrite `classic/CMakeLists.txt` on top of the shared logic; register
+     each program with `add_test()`; `dump_classic_metadata` runs on
+     `coord_vars.nc` and depends on the `coord_vars` test.
 4. **Move netcdf-4 C examples**
-   - Same for `netcdf-4/*.c`, its wrappers (`test_dump_nc4_metadata.sh`,
-     `test_format_variants.sh`, `test_groups.sh`) and expected output.
+   - Same for `netcdf-4/*.c`; `dump_nc4_metadata` runs on `user_types.nc`.
 5. **Local verification**
    - `cmake -S . -B build -DNETCDF_PREFIX=/usr/local/netcdf-c -DHDF5_PREFIX=/usr/local/hdf5-2.1.1`
    - `cmake --build build && ctest --test-dir build --output-on-failure`
-   - All 16 C programs build; every example that needs no external data runs
-     and exits 0; the three diff wrappers pass.
+   - All 16 C programs build and every example runs and exits 0.
 6. **CI**
    - `.github/workflows/ci.yml`: on push and pull_request, `ubuntu-latest`,
      `apt-get install libnetcdf-dev libhdf5-dev cmake`, configure, build,
