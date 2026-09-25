@@ -44,7 +44,7 @@ The examples in this repository are not related to that book.
 
 ## Building and running the examples
 
-Requirements: CMake 3.16 or later, a C compiler, and netCDF-C (with HDF5)
+Requirements: CMake 3.18 or later, a C compiler, and netCDF-C (with HDF5)
 installed so that `nc-config` can be found. For the Fortran examples you also
 need a Fortran compiler and netCDF-Fortran (`nf-config`).
 

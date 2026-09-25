@@ -208,6 +208,7 @@ contains
       integer :: ncid, varid, dimid, retval, zstd_ret
 
       zstd_available = .false.
+#ifdef HAVE_NF90_ZSTANDARD
       retval = nf90_create("zstd_probe.nc", NF90_CLOBBER + NF90_NETCDF4, ncid)
       if (retval /= nf90_noerr) return
 
@@ -218,6 +219,7 @@ contains
       retval = nf90_close(ncid)
       call system("rm -f zstd_probe.nc")
       zstd_available = (retval == nf90_noerr .and. zstd_ret == nf90_noerr)
+#endif
    end function check_zstd_support
 
    subroutine create_compressed_file( &
@@ -266,8 +268,10 @@ contains
             retval = nf90_def_var_deflate(ncid, varid, 1, 0, 0)
             if (retval /= nf90_noerr) call handle_err(retval)
          end if
+#ifdef HAVE_NF90_ZSTANDARD
          retval = nf90_def_var_zstandard(ncid, varid, zstd_level)
          if (retval /= nf90_noerr) call handle_err(retval)
+#endif
       else if (deflate == 1 .or. shuffle == 1) then
          retval = nf90_def_var_deflate(ncid, &
               varid, shuffle, deflate, &
@@ -336,12 +340,14 @@ contains
       if (retval /= nf90_noerr) call handle_err(retval)
       
       if (expected_zstd >= 0) then
+#ifdef HAVE_NF90_ZSTANDARD
          retval = nf90_inq_var_zstandard(ncid, varid, zstd, zstd_level)
          if (retval /= nf90_noerr) call handle_err(retval)
          if (zstd /= 1 .or. zstd_level /= expected_zstd) then
             print *, "Error: Zstandard settings mismatch"
             stop 2
          end if
+#endif
       else
          retval = nf90_inq_var_deflate(ncid, &
               varid, shuffle, deflate, &

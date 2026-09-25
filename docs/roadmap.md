@@ -120,7 +120,7 @@ system, CI.
    - Delivered as its own PR at the start of the sprint so it can be
      iterated on independently of the example work.
 2. **Repo skeleton**
-   - Root `CMakeLists.txt` (`cmake_minimum_required(VERSION 3.16)`, project
+   - Root `CMakeLists.txt` (`cmake_minimum_required(VERSION 3.18)`, project
      `NetCDF_Developers_Handbook` LANGUAGES C, `enable_testing()`,
      `add_subdirectory(examples)`).
    - `examples/CMakeLists.txt` adding `classic` and `netcdf-4`.

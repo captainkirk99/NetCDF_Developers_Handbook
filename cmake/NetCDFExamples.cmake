@@ -47,6 +47,21 @@ if(ENABLE_FORTRAN)
         separate_arguments(NF_LIBS_LIST UNIX_COMMAND "${NF_LIBS}")
         list(APPEND _ld_dirs ${NF_PREFIX}/lib)
         set(HAVE_NETCDF_FORTRAN ON)
+
+        # netcdf-fortran only exposes nf90_def_var_zstandard when it was built
+        # against a netCDF-C with zstd support (e.g. Ubuntu's apt build lacks it).
+        include(CheckFortranSourceCompiles)
+        set(CMAKE_REQUIRED_FLAGS "${NF_FFLAGS}")
+        set(CMAKE_REQUIRED_LIBRARIES ${NF_LIBS_LIST} ${NC_LIBS_LIST})
+        check_fortran_source_compiles("
+program probe
+  use netcdf
+  integer :: ncid, varid, ret
+  ret = nf90_def_var_zstandard(ncid, varid, 3)
+end program probe
+" HAVE_NF90_ZSTANDARD SRC_EXT f90)
+        unset(CMAKE_REQUIRED_FLAGS)
+        unset(CMAKE_REQUIRED_LIBRARIES)
     else()
         message(STATUS "nf-config not found; Fortran examples will not be built "
                        "(set NETCDF_FORTRAN_PREFIX or -DENABLE_FORTRAN=OFF to silence this)")
@@ -69,7 +84,11 @@ endfunction()
 # Build one example program from <name>.f90 in the current directory.
 function(add_netcdf_fortran_example name)
     add_executable(${name} ${name}.f90)
+    set_target_properties(${name} PROPERTIES Fortran_PREPROCESS ON)
     target_compile_options(${name} PRIVATE ${NF_FFLAGS_LIST})
+    if(HAVE_NF90_ZSTANDARD)
+        target_compile_definitions(${name} PRIVATE HAVE_NF90_ZSTANDARD)
+    endif()
     if(HDF5_PREFIX)
         target_link_directories(${name} PRIVATE ${HDF5_PREFIX}/lib)
     endif()

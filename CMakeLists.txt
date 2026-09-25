@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(NetCDF_Developers_Handbook LANGUAGES C)
 
 set(NETCDF_PREFIX "" CACHE PATH "netCDF-C install prefix (directory containing bin/nc-config)")
