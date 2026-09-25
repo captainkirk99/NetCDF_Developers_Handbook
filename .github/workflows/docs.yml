@@ -1,0 +1,51 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Doxygen documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+          doxygen --version
+
+      - name: Run Doxygen
+        run: |
+          mkdir -p build/doxygen
+          doxygen Doxyfile
+          mkdir -p build/doxygen/html/docs
+          cp -r docs/images build/doxygen/html/docs/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/doxygen/html
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

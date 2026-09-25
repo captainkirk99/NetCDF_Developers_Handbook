@@ -1,6 +1,7 @@
 # The NetCDF Developer's Handbook
 
 [![CI](https://github.com/captainkirk99/NetCDF_Developers_Handbook/actions/workflows/ci.yml/badge.svg)](https://github.com/captainkirk99/NetCDF_Developers_Handbook/actions/workflows/ci.yml)
+[![Docs](https://github.com/captainkirk99/NetCDF_Developers_Handbook/actions/workflows/docs.yml/badge.svg)](https://captainkirk99.github.io/NetCDF_Developers_Handbook/)
 
 Example programs for the book by Edward Hartnett:
 
@@ -24,10 +25,14 @@ standalone program that writes (and usually reads back) a netCDF file, so it
 can be run directly to see the concepts from the book in action.
 
 [examples/README.md](examples/README.md) lists every program and what it
-demonstrates. The examples were moved here from the
+demonstrates; the Doxygen documentation of every source file is published at
+<https://captainkirk99.github.io/NetCDF_Developers_Handbook/> (build it
+locally with `doxygen Doxyfile`; output in `build/doxygen/html`). The
+examples were moved here from the
 [NetCDF Expansion Pack](https://github.com/Intelligent-Data-Design-Inc/NEP);
 see [docs/roadmap.md](docs/roadmap.md) for how that was done and
 [docs/nep-handoff.md](docs/nep-handoff.md) for the list of moved files.
+Release notes: [docs/release-notes-v1.0.md](docs/release-notes-v1.0.md).
 
 ## See also: Earth Observation in Practice
 

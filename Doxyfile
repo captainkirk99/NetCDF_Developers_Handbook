@@ -1,0 +1,25 @@
+PROJECT_NAME           = "The NetCDF Developer's Handbook - Examples"
+PROJECT_BRIEF          = "C and Fortran example programs for the book"
+OUTPUT_DIRECTORY       = build/doxygen
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+
+INPUT                  = ./README.md examples/README.md docs/roadmap.md docs/nep-handoff.md docs/release-notes-v1.0.md examples
+FILE_PATTERNS          = *.c *.f90 *.md
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */build/*
+USE_MDFILE_AS_MAINPAGE = ./README.md
+
+EXTENSION_MAPPING      = f90=FortranFree
+OPTIMIZE_FOR_FORTRAN   = NO
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+SHOW_FILES             = YES
+JAVADOC_AUTOBRIEF      = YES
+MARKDOWN_SUPPORT       = YES
+HAVE_DOT               = NO
