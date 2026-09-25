@@ -68,22 +68,22 @@ Not moved: `examples/pdb`, `examples/dicom`, `examples/viz`.
 
 ### Sprints
 
-#### Sprint 1 - Skeleton, classic and netcdf-4 C examples, CI (planned below)
+#### Sprint 1 - Skeleton, classic and netcdf-4 C examples, CI (done)
 
 Deliverables: README with both books and covers (done first so it can be
 iterated on while the rest of the sprint proceeds), repo builds with CMake,
 `classic/` and `netcdf-4/` C examples build and run locally against
 `/usr/local/netcdf-c`, GitHub Actions runs them on every push/PR.
 
-#### Sprint 2 - Performance examples
+#### Sprint 2 - README fix, performance examples (planned below)
 
-- Move `performance/*.c` (minus `lossless.c`, `quantize.c`) and their
-  `CMakeLists.txt`; add filter-plugin detection so bzip2/lz4/szip/zstandard
-  build only when available and are skipped cleanly otherwise.
-- Set `HDF5_PLUGIN_PATH` in the test environment; document in
-  `examples/README.md` how to install the filter plugins.
-- CI: add a job that installs the plugin packages available on Ubuntu and runs
-  the performance examples with a short runtime configuration.
+- README: *Earth Observation in Practice* is a separate book with its own
+  examples repo; present it as a "see also" rather than as a book these
+  examples belong to.
+- Move `performance/*.c` (minus `lossless.c`, `quantize.c`), build all of
+  them, run them under `ctest`; bzip2/lz4/zstandard skip cleanly when the
+  filter plugin is not installed.
+- Document filter plugins and `HDF5_PLUGIN_PATH` in the README.
 
 #### Sprint 3 - Fortran examples
 
@@ -151,3 +151,45 @@ system, CI.
 Definition of done for Sprint 1: CI green on `main`, `ctest` passes locally
 against `/usr/local/netcdf-c`, README shows both books with covers, no
 changes made to the NEP repo.
+
+### Sprint 2 plan
+
+Scope: README correction, `examples/performance` (C only).
+
+1. **README**
+   - Only *The NetCDF Developer's Handbook* is the book these examples
+     accompany. Move *Earth Observation in Practice* to a "See also" section
+     (cover, Amazon link, its own examples repo at
+     https://github.com/captainkirk99/Earth_Observation_in_Practice) worded
+     as "for more netCDF examples see my other book", and state that the
+     examples here are unrelated to it.
+2. **Move performance C examples**
+   - Copy `performance/{bzip2,cache_tuning,chunking,deflate,endianness,
+     fill_values,lz4,szip,zstandard}.c` from `~/NEP/examples`. Leave behind
+     `lossless.c`/`quantize.c` (need `nep.h`), the CSV results, plot scripts,
+     PNGs and `*_metadata.txt`.
+   - `performance/CMakeLists.txt` on the shared logic: build all nine,
+     register all nine with `add_test()`, `RUN_SERIAL` (each writes a
+     ~130 MB scratch file). `ENABLE_BENCHMARKS` option compiles
+     `cache_tuning` with its timing sweeps.
+   - bzip2/lz4/zstandard: add a `filter_available()` check
+     (`nc_inq_filter_avail`) at the top of `main()` that prints a skipping
+     message and exits 0 when the HDF5 plugin cannot be loaded. Without it
+     the programs fail on `undefined filter` on any system, such as the
+     Ubuntu CI runner, that has netCDF >= 4.9 but no plugins.
+   - No source changes to the other six programs. `deflate` (~18 s) and
+     `szip` (~5 s) are the only slow tests; the rest run in about a second.
+3. **Local verification**
+   - Same commands as Sprint 1; all 25 tests pass against
+     `/usr/local/netcdf-c` (which has no plugins, so the three filter
+     examples report skipping).
+4. **CI**
+   - Existing workflow picks up the new directory; no new job. Ubuntu
+     packages no bzip2/lz4/zstd HDF5 plugins, so those three build and skip
+     in CI.
+5. **README build notes**
+   - How to install filter plugins and set `HDF5_PLUGIN_PATH`, and the
+     `ENABLE_BENCHMARKS` option.
+
+Definition of done for Sprint 2: CI green on `main`, 25 `ctest` tests pass
+locally, README presents the second book as "see also".

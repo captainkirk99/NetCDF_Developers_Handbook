@@ -2,30 +2,17 @@
 
 [![CI](https://github.com/captainkirk99/NetCDF_Developers_Handbook/actions/workflows/ci.yml/badge.svg)](https://github.com/captainkirk99/NetCDF_Developers_Handbook/actions/workflows/ci.yml)
 
-Example programs for the books by Edward Hartnett:
+Example programs for the book by Edward Hartnett:
 
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://www.amazon.com/NetCDF-Developers-Handbook-Authoritative-High-Performance/dp/B0GYP4R5ZZ/">
-        <img src="docs/images/netcdf_developers_handbook_cover.jpg" alt="The NetCDF Developer's Handbook cover" width="300">
-      </a>
-      <br>
-      <a href="https://www.amazon.com/NetCDF-Developers-Handbook-Authoritative-High-Performance/dp/B0GYP4R5ZZ/"><b>The NetCDF Developer's Handbook</b></a>
-      <br>
-      The Authoritative Guide to Writing High-Performance Programs for Scientific Data Management
-    </td>
-    <td align="center" width="50%">
-      <a href="https://www.amazon.com/Earth-Observation-Practice-Mission-Mission/dp/B0HJRZ9F7L/">
-        <img src="docs/images/earth_observation_in_practice_cover.jpg" alt="Earth Observation in Practice cover" width="300">
-      </a>
-      <br>
-      <a href="https://www.amazon.com/Earth-Observation-Practice-Mission-Mission/dp/B0HJRZ9F7L/"><b>Earth Observation in Practice</b></a>
-      <br>
-      A Mission-by-Mission Guide to Reading Satellite Data with NetCDF and Python
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <a href="https://www.amazon.com/NetCDF-Developers-Handbook-Authoritative-High-Performance/dp/B0GYP4R5ZZ/">
+    <img src="docs/images/netcdf_developers_handbook_cover.jpg" alt="The NetCDF Developer's Handbook cover" width="300">
+  </a>
+  <br>
+  <a href="https://www.amazon.com/NetCDF-Developers-Handbook-Authoritative-High-Performance/dp/B0GYP4R5ZZ/"><b>The NetCDF Developer's Handbook</b></a>
+  <br>
+  The Authoritative Guide to Writing High-Performance Programs for Scientific Data Management
+</p>
 
 ## What is here
 
@@ -39,6 +26,21 @@ can be run directly to see the concepts from the book in action.
 The examples are being moved here from the
 [NetCDF Expansion Pack](https://github.com/Intelligent-Data-Design-Inc/NEP);
 see [docs/roadmap.md](docs/roadmap.md) for the plan and current status.
+
+## See also: Earth Observation in Practice
+
+<a href="https://www.amazon.com/Earth-Observation-Practice-Mission-Mission/dp/B0HJRZ9F7L/">
+  <img src="docs/images/earth_observation_in_practice_cover.jpg" alt="Earth Observation in Practice cover" width="150" align="left" hspace="12">
+</a>
+
+For more netCDF examples, see my other book,
+[*Earth Observation in Practice: A Mission-by-Mission Guide to Reading Satellite Data with NetCDF and Python*](https://www.amazon.com/Earth-Observation-Practice-Mission-Mission/dp/B0HJRZ9F7L/).
+It reads real satellite data products with netCDF and Python, and has its own
+example repository at
+[captainkirk99/Earth_Observation_in_Practice](https://github.com/captainkirk99/Earth_Observation_in_Practice).
+The examples in this repository are not related to that book.
+
+<br clear="all">
 
 ## Building and running the examples
 
@@ -55,6 +57,16 @@ Omit `NETCDF_PREFIX` and `HDF5_PREFIX` if `nc-config` is already on your
 `PATH` (for example when netCDF is installed from your distribution's
 packages). `ctest` runs every example that does not need an external data
 file.
+
+The `examples/performance` programs `bzip2`, `lz4` and `zstandard` need the
+matching HDF5 filter plugin. They build everywhere but print a "skipping"
+message and exit successfully when the plugin cannot be loaded. To run them,
+install the plugins (for example from the
+[netcdf-c](https://github.com/Unidata/netcdf-c) `plugins/` directory, or the
+[HDF5 filter plugins](https://github.com/HDFGroup/hdf5_plugins)) and point
+`HDF5_PLUGIN_PATH` at the directory containing them before running `ctest`.
+`cache_tuning` runs its timing sweeps only when configured with
+`-DENABLE_BENCHMARKS=ON`.
 
 ## License
 
