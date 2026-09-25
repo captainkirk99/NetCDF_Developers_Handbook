@@ -27,3 +27,28 @@ jobs:
 
       - name: Run examples
         run: ctest --test-dir build --output-on-failure
+
+  parallel:
+    name: Build and run parallel I/O examples (Ubuntu, Open MPI)
+    runs-on: ubuntu-latest
+    env:
+      OMPI_ALLOW_RUN_AS_ROOT: 1
+      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MPI and parallel netCDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake gfortran libopenmpi-dev libhdf5-openmpi-dev \
+            libnetcdf-dev libnetcdf-mpi-dev libnetcdff-dev
+          pkg-config --modversion netcdf-mpi
+
+      - name: Configure
+        run: cmake -S . -B build -DENABLE_PARALLEL=ON
+
+      - name: Build parallel examples
+        run: cmake --build build -j --target square16_par f_square16_par
+
+      - name: Run parallel examples
+        run: ctest --test-dir build -R square16 --output-on-failure
