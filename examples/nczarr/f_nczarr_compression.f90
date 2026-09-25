@@ -162,6 +162,14 @@ program f_nczarr_compression
         deflate_in, ", level=", &
         deflate_level_in
 
+   ! A netCDF-C built without NcZarr filter support accepts the filter
+   ! settings but does not store them.
+   if (shuffle_in == 0 .and. deflate_in == 0) then
+      print *, "NcZarr filters not supported by this netCDF-C; skipping."
+      retval = nf90_close(ncid)
+      stop
+   end if
+
    if (shuffle_in /= 1 .or. deflate_in /= 1 &
         .or. deflate_level_in /= DEFLATE_LEVEL) &
         then

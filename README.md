@@ -90,7 +90,8 @@ available and skips the rest with a status message.
 | `examples/parallelIO` | MPI + parallel netCDF-C | `-DENABLE_PARALLEL=ON` | yes, under `mpiexec -n 4` |
 
 **NcZarr.** `nczarr_compression` needs the deflate filter plugin (see above)
-and skips when it is missing; `nczarr_enhanced` falls back to fixed-size
+and skips when it is missing or when netCDF-C was built without NcZarr filter
+support (as Ubuntu's apt package is); `nczarr_enhanced` falls back to fixed-size
 dimensions on netCDF-C releases before 4.9.3, which do not support unlimited
 dimensions in NcZarr.
 

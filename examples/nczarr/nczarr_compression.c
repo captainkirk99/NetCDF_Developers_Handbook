@@ -168,6 +168,13 @@ int main(void)
            deflate_in ? "on" : "off",
            deflate_level_in);
 
+    if (!shuffle_in && !deflate_in) {
+        /* A netCDF-C built without NcZarr filter support accepts the
+         * filter settings but does not store them. */
+        printf("NcZarr filters not supported by this netCDF-C; skipping.\n");
+        nc_close(ncid);
+        return 0;
+    }
     if (!shuffle_in || !deflate_in || deflate_level_in != DEFLATE_LEVEL) {
         fprintf(stderr, "Compression metadata mismatch\n");
         return 1;
