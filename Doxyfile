@@ -6,11 +6,11 @@ GENERATE_LATEX         = NO
 QUIET                  = YES
 WARN_IF_UNDOCUMENTED   = NO
 
-INPUT                  = ./README.md examples/README.md docs/roadmap.md docs/nep-handoff.md docs/release-notes-v1.0.md examples
+INPUT                  = docs/mainpage.md docs/roadmap.md docs/nep-handoff.md docs/release-notes-v1.0.md examples
 FILE_PATTERNS          = *.c *.f90 *.md
 RECURSIVE              = YES
-EXCLUDE_PATTERNS       = */build/*
-USE_MDFILE_AS_MAINPAGE = ./README.md
+EXCLUDE_PATTERNS       = */build/* */examples/README.md
+USE_MDFILE_AS_MAINPAGE = docs/mainpage.md
 
 EXTENSION_MAPPING      = f90=FortranFree
 OPTIMIZE_FOR_FORTRAN   = NO
@@ -23,3 +23,6 @@ SHOW_FILES             = YES
 JAVADOC_AUTOBRIEF      = YES
 MARKDOWN_SUPPORT       = YES
 HAVE_DOT               = NO
+IMAGE_PATH             = docs/images
+FULL_PATH_NAMES        = YES
+STRIP_FROM_PATH        = .
