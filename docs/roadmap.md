@@ -69,9 +69,10 @@ Not moved: `examples/pdb`, `examples/dicom`, `examples/viz`.
 
 #### Sprint 1 - Skeleton, classic and netcdf-4 C examples, CI (planned below)
 
-Deliverables: repo builds with CMake, `classic/` and `netcdf-4/` C examples
-build and run locally against `/usr/local/netcdf-c`, GitHub Actions runs them
-on every push/PR, README updated with both books and covers.
+Deliverables: README with both books and covers (done first so it can be
+iterated on while the rest of the sprint proceeds), repo builds with CMake,
+`classic/` and `netcdf-4/` C examples build and run locally against
+`/usr/local/netcdf-c`, GitHub Actions runs them on every push/PR.
 
 #### Sprint 2 - Performance examples and expected-output wrappers
 
@@ -105,16 +106,22 @@ on every push/PR, README updated with both books and covers.
 
 - `examples/README.md`: table of all examples, what each demonstrates, which
   book chapter it accompanies, how to build and run.
-- Final pass on top-level README (books, covers, build badge, quick start).
 - Tag `v1.0`. Hand off the list of moved files so they can be removed from
   NEP in a separate operation.
 
 ### Sprint 1 plan
 
-Scope: `examples/classic`, `examples/netcdf-4` (C only), build system, CI,
-README.
+Scope: README, `examples/classic`, `examples/netcdf-4` (C only), build
+system, CI.
 
-1. **Repo skeleton**
+1. **README**
+   - Short description of the repo and its relation to the two books, links
+     to both Amazon pages, cover images stored in `docs/images/` (fetched
+     from the Amazon listings), placeholder build/run quick start that is
+     filled in as the build system lands.
+   - Delivered as its own PR at the start of the sprint so it can be
+     iterated on independently of the example work.
+2. **Repo skeleton**
    - Root `CMakeLists.txt` (`cmake_minimum_required(VERSION 3.16)`, project
      `NetCDF_Developers_Handbook` LANGUAGES C, `enable_testing()`,
      `add_subdirectory(examples)`).
@@ -125,30 +132,27 @@ README.
      `LD_LIBRARY_PATH` test environment, so per-directory CMake files are
      just a program list plus `add_test()` lines.
    - `.gitignore` additions for `build/` and `*.nc`.
-2. **Move classic C examples**
+3. **Move classic C examples**
    - Copy `classic/*.c`, `classic/test_*.sh` and the referenced
      `expected_output/*.txt` from `~/NEP/examples`, unchanged apart from
      removing any NEP-specific include paths.
    - Adapt `classic/CMakeLists.txt` to the shared logic; register each
      program with `add_test()`, wrappers used where NEP uses them
      (`test_coord.sh`, `test_quickstart.sh`, `test_dump_classic_metadata.sh`).
-3. **Move netcdf-4 C examples**
+4. **Move netcdf-4 C examples**
    - Same for `netcdf-4/*.c`, its wrappers (`test_dump_nc4_metadata.sh`,
      `test_format_variants.sh`, `test_groups.sh`) and expected output.
-4. **Local verification**
+5. **Local verification**
    - `cmake -S . -B build -DNETCDF_PREFIX=/usr/local/netcdf-c -DHDF5_PREFIX=/usr/local/hdf5-2.1.1`
    - `cmake --build build && ctest --test-dir build --output-on-failure`
    - All 16 C programs build; every example that needs no external data runs
      and exits 0; the three diff wrappers pass.
-5. **CI**
+6. **CI**
    - `.github/workflows/ci.yml`: on push and pull_request, `ubuntu-latest`,
      `apt-get install libnetcdf-dev libhdf5-dev cmake`, configure, build,
      `ctest --output-on-failure`.
-   - Add the workflow status badge to the README.
-6. **README**
-   - Short description of the repo and its relation to the two books, links
-     to both Amazon pages, cover images stored in `docs/images/` (fetched
-     from the Amazon listings), build/run quick start.
+   - Add the workflow status badge and final build/run quick start to the
+     README.
 
 Definition of done for Sprint 1: CI green on `main`, `ctest` passes locally
 against `/usr/local/netcdf-c`, README shows both books with covers, no
