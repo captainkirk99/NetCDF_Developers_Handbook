@@ -75,7 +75,7 @@ iterated on while the rest of the sprint proceeds), repo builds with CMake,
 `classic/` and `netcdf-4/` C examples build and run locally against
 `/usr/local/netcdf-c`, GitHub Actions runs them on every push/PR.
 
-#### Sprint 2 - README fix, performance examples (planned below)
+#### Sprint 2 - README fix, performance examples (done)
 
 - README: *Earth Observation in Practice* is a separate book with its own
   examples repo; present it as a "see also" rather than as a book these
@@ -85,7 +85,7 @@ iterated on while the rest of the sprint proceeds), repo builds with CMake,
   filter plugin is not installed.
 - Document filter plugins and `HDF5_PLUGIN_PATH` in the README.
 
-#### Sprint 3 - Fortran examples
+#### Sprint 3 - Fortran examples (planned below)
 
 - Move `f_classic/`, `f_netcdf-4/`; add `nf-config`
   detection and the `ENABLE_FORTRAN` option.
@@ -120,7 +120,7 @@ system, CI.
    - Delivered as its own PR at the start of the sprint so it can be
      iterated on independently of the example work.
 2. **Repo skeleton**
-   - Root `CMakeLists.txt` (`cmake_minimum_required(VERSION 3.16)`, project
+   - Root `CMakeLists.txt` (`cmake_minimum_required(VERSION 3.18)`, project
      `NetCDF_Developers_Handbook` LANGUAGES C, `enable_testing()`,
      `add_subdirectory(examples)`).
    - `examples/CMakeLists.txt` adding `classic` and `netcdf-4`.
@@ -193,3 +193,49 @@ Scope: README correction, `examples/performance` (C only).
 
 Definition of done for Sprint 2: CI green on `main`, 25 `ctest` tests pass
 locally, README presents the second book as "see also".
+
+### Sprint 3 plan
+
+Scope: `examples/f_classic`, `examples/f_netcdf-4` (Fortran 90 versions of
+the Sprint 1 C examples).
+
+1. **Build system**
+   - Root: `option(ENABLE_FORTRAN ON)` and `NETCDF_FORTRAN_PREFIX` cache
+     variable. The project stays `LANGUAGES C`; Fortran is enabled with
+     `enable_language(Fortran)` only when `nf-config` is found.
+   - `cmake/NetCDFExamples.cmake`: look for `nf-config` under
+     `NETCDF_FORTRAN_PREFIX/bin`, then next to `nc-config`, then `PATH`.
+     If found, export `NF_FFLAGS_LIST`/`NF_LIBS_LIST` from
+     `nf-config --fflags/--flibs`, add `nf-config --prefix`/lib to the test
+     `LD_LIBRARY_PATH`, set `HAVE_NETCDF_FORTRAN`, and provide
+     `add_netcdf_fortran_example(name)` (`name.f90`, links `NF_LIBS_LIST`
+     then `NC_LIBS_LIST`). If not found, print a status message and skip the
+     Fortran directories; the C build is unaffected.
+   - `examples/CMakeLists.txt` adds `f_classic` and `f_netcdf-4` when
+     `HAVE_NETCDF_FORTRAN`.
+2. **Move Fortran examples**
+   - Copy the 16 `*.f90` files from `~/NEP/examples/f_classic` and
+     `f_netcdf-4`, unchanged. Leave behind `test_*.sh` and the CDL/expected
+     output comparisons, as in Sprint 1.
+   - `f_classic/CMakeLists.txt` and `f_netcdf-4/CMakeLists.txt`: program
+     list plus `add_netcdf_run()`; `f_dump_classic_metadata` runs on
+     `f_coord_vars.nc` (DEPENDS `f_coord_vars`), `f_dump_nc4_metadata` on
+     `f_user_types.nc` (DEPENDS `f_user_types`).
+3. **Local verification**
+   - Install `gfortran`; build netCDF-Fortran 4.6.1 from source against
+     `/usr/local/netcdf-c` into `/usr/local/netcdf-fortran` (add to the
+     environment blueprint).
+   - `cmake -S . -B build -DNETCDF_PREFIX=/usr/local/netcdf-c -DNETCDF_FORTRAN_PREFIX=/usr/local/netcdf-fortran`
+   - All 41 tests pass (25 C + 16 Fortran). Also check that
+     `-DENABLE_FORTRAN=OFF` and a configure without `nf-config` still
+     build the C examples.
+4. **CI**
+   - Add `gfortran` and `libnetcdff-dev` to the apt install in `ci.yml`;
+     `nf-config` is then on `PATH` and the Fortran examples run in the same
+     job.
+5. **README**
+   - Fortran requirements, `NETCDF_FORTRAN_PREFIX` in the quick start,
+     `ENABLE_FORTRAN` note.
+
+Definition of done for Sprint 3: CI green on `main` with the Fortran
+examples running, 41 `ctest` tests pass locally.
