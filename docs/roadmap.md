@@ -280,7 +280,7 @@ optional component that the build detects or that the user switches on.
      library plus a `find_path(netcdf_par.h)` for the headers (override the
      module name with `NETCDF_PARALLEL_PKG`, e.g. `netcdf` for a self-built
      parallel install). The C example is registered as
-     `mpiexec -n 4 [--oversubscribe] square16_par` (both programs insist on
+     `mpiexec -n 4 square16_par` (with `OMPI_MCA_rmaps_base_oversubscribe=1` in the test environment) (both programs insist on
      exactly 4 ranks).
    - `f_square16_par` is built when Fortran is enabled. netCDF-Fortran
      always compiles its parallel entry points and only fails at run time
@@ -305,8 +305,7 @@ optional component that the build detects or that the user switches on.
    - New job `parallel`: `libopenmpi-dev libhdf5-openmpi-dev
      libnetcdf-mpi-dev gfortran libnetcdff-dev`, configure
      `-DENABLE_PARALLEL=ON`, build only the two parallel targets, run
-     `ctest -R square16`, with `OMPI_ALLOW_RUN_AS_ROOT*` and
-     `--oversubscribe`.
+     `ctest -R square16`, with `OMPI_ALLOW_RUN_AS_ROOT*`.
 6. **README**
    - Component table: which `nc-config` flag each directory needs, the
      `ENABLE_PARALLEL`, `RUN_OPENDAP_EXAMPLES` and `NETCDF_FORTRAN_PARALLEL`

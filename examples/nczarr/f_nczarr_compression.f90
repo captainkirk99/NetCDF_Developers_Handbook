@@ -62,6 +62,8 @@ program f_nczarr_compression
    integer, parameter :: NDIMS = 2
    integer, parameter :: CHUNK_Y = 2, CHUNK_X = 5
    integer, parameter :: DEFLATE_LEVEL = 1
+   ! NC_ENOFILTER; nf90_enofilter only exists in netCDF-Fortran >= 4.6.1.
+   integer, parameter :: ENOFILTER = -136
 
    integer :: ncid, varid, retval
    integer :: y_dimid, x_dimid
@@ -104,7 +106,7 @@ program f_nczarr_compression
    ! Step 2: Enable shuffle + deflate level 1. NcZarr applies deflate through
    ! a filter plugin; without a plugin directory the filter is unavailable.
    retval = nf90_def_var_deflate(ncid, varid, 1, 1, DEFLATE_LEVEL)
-   if (retval == nf90_enofilter) then
+   if (retval == ENOFILTER) then
       print *, "Deflate filter plugin not available for NcZarr; skipping."
       retval = nf90_abort(ncid)
       stop
