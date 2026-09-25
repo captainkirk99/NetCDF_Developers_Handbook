@@ -21,7 +21,7 @@ everything except the performance benchmarks.
 | `examples/opendap` | 3 | 3 | Reading a remote dataset through the DAP client |
 | `examples/parallelIO` | 1 | 1 | Collective netCDF-4 I/O from four MPI ranks |
 
-[examples/README.md](../examples/README.md) describes every program.
+[examples/README.md](https://github.com/captainkirk99/NetCDF_Developers_Handbook/blob/main/examples/README.md) describes every program.
 
 ## Building and running
 

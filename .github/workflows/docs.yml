@@ -31,8 +31,6 @@ jobs:
         run: |
           mkdir -p build/doxygen
           doxygen Doxyfile
-          mkdir -p build/doxygen/html/docs
-          cp -r docs/images build/doxygen/html/docs/
 
       - uses: actions/upload-pages-artifact@v3
         with:
