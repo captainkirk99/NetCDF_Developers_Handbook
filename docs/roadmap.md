@@ -85,20 +85,20 @@ iterated on while the rest of the sprint proceeds), repo builds with CMake,
   filter plugin is not installed.
 - Document filter plugins and `HDF5_PLUGIN_PATH` in the README.
 
-#### Sprint 3 - Fortran examples (planned below)
+#### Sprint 3 - Fortran examples (done)
 
 - Move `f_classic/`, `f_netcdf-4/`; add `nf-config`
   detection and the `ENABLE_FORTRAN` option.
 - Verify locally (requires installing netcdf-fortran against
   `/usr/local/netcdf-c`) and in CI with `libnetcdff-dev` and `gfortran`.
 
-#### Sprint 4 - NcZarr, OPeNDAP and parallel I/O (optional components)
+#### Sprint 4 - NcZarr, OPeNDAP and parallel I/O (planned below)
 
-- Move `nczarr/` (C and Fortran) with `ENABLE_NCZARR` auto-detection; run in
-  CI only if the apt netcdf-c reports NcZarr support.
-- Move `opendap/` with `ENABLE_OPENDAP` (build-only, never run in CI).
-- Move `parallelIO/` with `ENABLE_PARALLEL` (off by default; separate CI job
-  with `mpich` and parallel netcdf-c if apt provides it, otherwise build-only).
+- Move `nczarr/` (C and Fortran); built and run when `nc-config --has-nczarr`.
+- Move `opendap/` (C and Fortran); built when `nc-config --has-dap`, never
+  run in CI (network).
+- Move `parallelIO/` behind `ENABLE_PARALLEL` (off by default); separate CI
+  job with OpenMPI and apt `libnetcdf-mpi-dev`.
 
 #### Sprint 5 - Documentation and release
 
@@ -239,3 +239,79 @@ the Sprint 1 C examples).
 
 Definition of done for Sprint 3: CI green on `main` with the Fortran
 examples running, 41 `ctest` tests pass locally.
+
+### Sprint 4 plan
+
+Scope: `examples/nczarr`, `examples/opendap`, `examples/parallelIO` (C and
+Fortran). All three depend on how netCDF-C was configured, so each is an
+optional component that the build detects or that the user switches on.
+
+1. **NcZarr** (`nc-config --has-nczarr`)
+   - Copy the 4 C and 4 Fortran sources from `~/NEP/examples/nczarr`. Leave
+     behind `test_*.sh*`. Two adaptations so they run on netCDF-C 4.9.2
+     (this VM and Ubuntu's apt): `*nczarr_compression` skips on
+     `NC_ENOFILTER` (NcZarr deflate needs the filter plugin directory),
+     `*nczarr_enhanced` falls back to fixed-size dimensions on
+     `NC_EDIMSIZE` (NcZarr unlimited dimensions arrived in 4.9.3).
+   - `add_netcdf_run()` sets `HDF5_PLUGIN_PATH` from `nc-config --plugindir`
+     when that directory exists, so the compression examples exercise the
+     real filter path against a netCDF-C built `--with-plugin-dir`.
+   - `cmake/NetCDFExamples.cmake` exports `HAVE_NCZARR`;
+     `examples/CMakeLists.txt` adds `nczarr` when it is set, otherwise prints
+     a status message. The Fortran programs are added when
+     `HAVE_NETCDF_FORTRAN` too.
+   - All eight write and read back `file://*.zarr#mode=nczarr` directories in
+     the build tree, so they run under `ctest` like everything else.
+2. **OPeNDAP** (`nc-config --has-dap`)
+   - Copy the 3 C and 3 Fortran sources, unchanged (`README.md` stays in
+     NEP; its content moves into this repo's README section). Exports
+     `HAVE_DAP`; `examples/CMakeLists.txt` adds `opendap` when set.
+   - The programs read `http://test.opendap.org/...`, so they are only
+     built by default. `option(RUN_OPENDAP_EXAMPLES OFF)` registers them
+     with `ctest` for users with network access; CI leaves it off.
+3. **Parallel I/O** (`option(ENABLE_PARALLEL OFF)`)
+   - Copy `square16_par.c` and `f_square16_par.f90`, unchanged. Leave
+     behind `run_par_examples.sh.in` (ncdump/grep validation).
+   - `parallelIO/CMakeLists.txt`: `find_package(MPI)`; a parallel-enabled
+     netCDF-C is required. Ubuntu's `libnetcdf-mpi-dev` ships no
+     `nc-config`, only `pkg-config netcdf-mpi` (and its `.pc` and
+     `netCDFConfig.cmake` both point at the wrong include directory), so the
+     directory uses `pkg_check_modules(NETCDF_PAR netcdf-mpi)` for the
+     library plus a `find_path(netcdf_par.h)` for the headers (override the
+     module name with `NETCDF_PARALLEL_PKG`, e.g. `netcdf` for a self-built
+     parallel install). The C example is registered as
+     `mpiexec -n 4 square16_par` (with `OMPI_MCA_rmaps_base_oversubscribe=1` in the test environment) (both programs insist on
+     exactly 4 ranks).
+   - `f_square16_par` is built when Fortran is enabled. netCDF-Fortran
+     always compiles its parallel entry points and only fails at run time
+     (`NF90_ENOPAR`) when the underlying netCDF-C is serial, and there is no
+     `nf-config` flag for it, so its run is registered only with
+     `-DNETCDF_FORTRAN_PARALLEL=ON`. Apt's `libnetcdff-dev` links the
+     serial netCDF-C, so CI builds it but does not run it.
+4. **Local verification**
+   - Rebuild `/usr/local/netcdf-c` with `--enable-nczarr --enable-dap
+     --with-plugin-dir` (libcurl is installed) and update the environment
+     blueprint; rebuild netCDF-Fortran against it.
+   - Main build: 41 + 8 NcZarr tests pass; the 6 OPeNDAP programs build;
+     `-DRUN_OPENDAP_EXAMPLES=ON` runs them from this VM if the network
+     allows.
+   - Parallel: `apt-get install libopenmpi-dev libhdf5-openmpi-dev
+     libnetcdf-mpi-dev`, then a second build with `-DENABLE_PARALLEL=ON`
+     runs `square16_par` under `mpiexec -n 4` (this VM needs
+     `HWLOC_COMPONENTS=-x86` to stop Open MPI crashing in hwloc).
+5. **CI**
+   - Existing job: apt netcdf-c reports NcZarr and DAP, so the NcZarr
+     examples run and the OPeNDAP ones build.
+   - New job `parallel`: `libopenmpi-dev libhdf5-openmpi-dev
+     libnetcdf-mpi-dev gfortran libnetcdff-dev`, configure
+     `-DENABLE_PARALLEL=ON`, build only the two parallel targets, run
+     `ctest -R square16`, with `OMPI_ALLOW_RUN_AS_ROOT*`.
+6. **README**
+   - Component table: which `nc-config` flag each directory needs, the
+     `ENABLE_PARALLEL`, `RUN_OPENDAP_EXAMPLES` and `NETCDF_FORTRAN_PARALLEL`
+     options, and the OPeNDAP server/URL note from NEP's `opendap/README.md`.
+
+Definition of done for Sprint 4: both CI jobs green on `main`, 49 `ctest`
+tests pass locally in the main build and `square16_par` passes in the
+parallel build, OPeNDAP examples build (and run when the network is
+available).

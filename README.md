@@ -60,7 +60,8 @@ Omit `NETCDF_PREFIX` and `HDF5_PREFIX` if `nc-config` is already on your
 packages). `ctest` runs every example that does not need an external data
 file.
 
-The Fortran examples (`examples/f_classic`, `examples/f_netcdf-4`) are built
+The Fortran examples (`examples/f_classic`, `examples/f_netcdf-4`, and the
+`f_*` programs in `nczarr`, `opendap` and `parallelIO`) are built
 whenever `nf-config` is found, next to `nc-config` or under
 `NETCDF_FORTRAN_PREFIX`; otherwise they are skipped with a status message.
 Pass `-DENABLE_FORTRAN=OFF` to leave them out entirely.
@@ -72,8 +73,56 @@ install the plugins (for example from the
 [netcdf-c](https://github.com/Unidata/netcdf-c) `plugins/` directory, or the
 [HDF5 filter plugins](https://github.com/HDFGroup/hdf5_plugins)) and point
 `HDF5_PLUGIN_PATH` at the directory containing them before running `ctest`.
+If netCDF-C was configured with `--with-plugin-dir`, the build finds that
+directory through `nc-config --plugindir` and sets `HDF5_PLUGIN_PATH` for you.
 `cache_tuning` runs its timing sweeps only when configured with
 `-DENABLE_BENCHMARKS=ON`.
+
+### Optional components: NcZarr, OPeNDAP, parallel I/O
+
+These depend on how netCDF-C was configured; the build detects what is
+available and skips the rest with a status message.
+
+| Directory | Needs | Built | Run by `ctest` |
+|---|---|---|---|
+| `examples/nczarr` | `nc-config --has-nczarr` = yes | automatically | yes (local `file://*.zarr` stores) |
+| `examples/opendap` | `nc-config --has-dap` = yes | automatically | only with `-DRUN_OPENDAP_EXAMPLES=ON` |
+| `examples/parallelIO` | MPI + parallel netCDF-C | `-DENABLE_PARALLEL=ON` | yes, under `mpiexec -n 4` |
+
+**NcZarr.** `nczarr_compression` needs the deflate filter plugin (see above)
+and skips when it is missing or when netCDF-C was built without NcZarr filter
+support (as Ubuntu's apt package is); `nczarr_enhanced` falls back to fixed-size
+dimensions on netCDF-C releases before 4.9.3, which do not support unlimited
+dimensions in NcZarr.
+
+**OPeNDAP.** The programs read `sst.mnmean.nc.gz` from the public
+[test.opendap.org](http://test.opendap.org) server, so they need network
+access and are never run in CI. To run them yourself:
+
+```sh
+cmake -S . -B build -DRUN_OPENDAP_EXAMPLES=ON ...
+cmake --build build
+ctest --test-dir build -R opendap --output-on-failure
+```
+
+**Parallel I/O.** `square16_par` and `f_square16_par` must be run on exactly
+four MPI ranks. Both need an MPI implementation; the C program also needs a
+netCDF-C built with `--enable-parallel4`, found with `pkg-config`. On Ubuntu:
+
+```sh
+sudo apt-get install libopenmpi-dev libhdf5-openmpi-dev libnetcdf-mpi-dev
+cmake -S . -B build -DENABLE_PARALLEL=ON
+cmake --build build
+ctest --test-dir build -R square16 --output-on-failure
+```
+
+The default `pkg-config` module is `netcdf-mpi` (Ubuntu's name); for a
+self-built parallel netCDF-C pass `-DNETCDF_PARALLEL_PKG=netcdf` and put its
+`lib/pkgconfig` on `PKG_CONFIG_PATH`. `f_square16_par` is built whenever
+Fortran is enabled, but netCDF-Fortran has no way to report whether it was
+linked against a parallel netCDF-C (Ubuntu's `libnetcdff-dev` is not), so its
+run is only registered with `-DNETCDF_FORTRAN_PARALLEL=ON`. If Open MPI
+crashes inside `hwloc` on a virtual machine, set `HWLOC_COMPONENTS=-x86`.
 
 ## License
 

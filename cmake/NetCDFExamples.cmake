@@ -20,6 +20,19 @@ message(STATUS "Using ${NC_VERSION} from ${NC_CONFIG}")
 separate_arguments(NC_CFLAGS_LIST UNIX_COMMAND "${NC_CFLAGS}")
 separate_arguments(NC_LIBS_LIST UNIX_COMMAND "${NC_LIBS}")
 
+# Optional netCDF-C features; each gates an examples subdirectory.
+foreach(_feature nczarr dap)
+    string(TOUPPER ${_feature} _FEATURE)
+    execute_process(COMMAND ${NC_CONFIG} --has-${_feature}
+                    OUTPUT_VARIABLE _has RESULT_VARIABLE _rc OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(_rc EQUAL 0 AND _has STREQUAL "yes")
+        set(HAVE_${_FEATURE} ON)
+    else()
+        set(HAVE_${_FEATURE} OFF)
+    endif()
+    message(STATUS "netCDF-C ${_feature} support: ${HAVE_${_FEATURE}}")
+endforeach()
+
 set(_ld_dirs ${NC_LIBDIR})
 if(HDF5_PREFIX)
     list(APPEND _ld_dirs ${HDF5_PREFIX}/lib)
@@ -70,6 +83,19 @@ endif()
 
 list(JOIN _ld_dirs ":" _ld_path)
 set(NC_TEST_ENV "LD_LIBRARY_PATH=${_ld_path}:$ENV{LD_LIBRARY_PATH}")
+
+# Point the tests at netCDF-C's filter plugins (needed for compression in
+# NcZarr and for the bzip2/lz4/zstandard performance examples) unless the
+# caller already set HDF5_PLUGIN_PATH.
+if(NOT DEFINED ENV{HDF5_PLUGIN_PATH})
+    execute_process(COMMAND ${NC_CONFIG} --plugindir
+                    OUTPUT_VARIABLE NC_PLUGINDIR RESULT_VARIABLE _rc
+                    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(_rc EQUAL 0 AND IS_DIRECTORY "${NC_PLUGINDIR}")
+        message(STATUS "Using netCDF filter plugins from ${NC_PLUGINDIR}")
+        list(APPEND NC_TEST_ENV "HDF5_PLUGIN_PATH=${NC_PLUGINDIR}")
+    endif()
+endif()
 
 # Build one example program from <name>.c in the current directory.
 function(add_netcdf_example name)
