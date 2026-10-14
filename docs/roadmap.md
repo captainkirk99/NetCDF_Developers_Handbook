@@ -1,5 +1,13 @@
 # Roadmap
 
+## Version 1.1 - Use get_vara/put_vara in Several Examples
+
+### Goal
+
+Most of the example programs use nc_put_var_*() and nc_get_var_*() to write and read entire netCDF variables in one call. This is simple and works well for the small data in the examples, but is not how most code looks. We need to use the vara versions, with start/count arrays.
+
+We don't need to change every example, just a few characteristic ones, including var4d.c and compression.c (and the Fortran equivalents.
+
 ## Version 1.0 - Examples from the NetCDF Expansion Pack
 
 ### Goal
@@ -56,7 +64,7 @@ Not moved: `examples/pdb`, `examples/dicom`, `examples/viz`.
   `ENABLE_FORTRAN` (default ON if netcdf-fortran found), `ENABLE_NCZARR`
   (auto-detected from `nc-config --has-nczarr`), `ENABLE_OPENDAP` (default
   OFF), `ENABLE_PARALLEL` (default OFF), `ENABLE_PERFORMANCE_FILTERS`
-  (bzip2/lz4/szip/zstandard only when the plugin is found).
+  (bzip2/lz4/szipgit@github.com:captainkirk99/NetCDF_Developers_Handbook.git/zstandard only when the plugin is found).
 - Each runnable example is registered with `add_test()` so `ctest` runs it;
   examples that read a file written by another example declare a ctest
   `DEPENDS` on it. NEP's `test_*.sh` wrappers, `validate_cdl.sh` and
