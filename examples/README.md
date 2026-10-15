@@ -24,11 +24,11 @@ attributes, coordinate variables and the unlimited dimension.
 | Program | Demonstrates |
 |---|---|
 | `quickstart` | The smallest complete netCDF program: create, define, write, close, reopen, read |
-| `simple_2D` | Writing and reading a 2D integer array |
-| `var4d` | 2D, 3D and 4D variables sharing dimensions |
+| `simple_2D` | Writing and reading a 2D integer array with explicit `start`/`count` selections |
+| `var4d` | 2D, 3D and 4D variables sharing dimensions, with time-dependent data transferred one timestep per `start`/`count` call |
 | `coord` | 3D surface temperature with `time`, `lat`, `lon` coordinate variables |
 | `coord_vars` | Coordinate variables and CF-convention attributes (`units`, `long_name`, `axis`) |
-| `unlimited_dim` | Appending records along an unlimited dimension |
+| `unlimited_dim` | Appending and reading records one timestep at a time along an unlimited dimension |
 | `size_limits` | The size limits of CDF-1, CDF-2 (64-bit offset) and CDF-5 |
 | `dump_classic_metadata` | Reading back every dimension, variable and attribute of a file (runs on `coord_vars.nc`) |
 
@@ -45,7 +45,7 @@ dimensions, chunking and compression.
 | `user_types` | Compound, enum, variable-length and opaque types |
 | `multi_unlimited` | Several unlimited dimensions in one file |
 | `chunking_performance` | How chunk shape affects read and write time for different access patterns |
-| `compression` | Deflate, shuffle and zstandard, alone and combined, with size and timing comparison |
+| `compression` | Deflate, shuffle and zstandard with size/timing comparison and timestep-at-a-time `start`/`count` I/O |
 | `dump_nc4_metadata` | Reading back groups, user-defined types and attributes (runs on `user_types.nc`) |
 
 ## Performance (`performance/`, C only)

@@ -15,6 +15,7 @@
  * - Understand unlimited dimensions and their use cases
  * - Learn to create files with NC_UNLIMITED dimension
  * - Master appending data to existing files
+ * - Read and write one timestep per vara call with explicit start/count arrays
  * - Work with time-series data patterns
  * - Understand performance implications of unlimited dimensions
  *
@@ -127,14 +128,19 @@ int main()
    if ((retval = nc_enddef(ncid)))
       ERR(retval);
    
-   /* Write initial timesteps (0, 1, 2) */
+   /* Write initial data one timestep at a time. */
    size_t start[3] = {0, 0, 0};
-   size_t count[3] = {INITIAL_TIMESTEPS, NLAT, NLON};
-   
-   if ((retval = nc_put_vara_float(ncid, time_varid, start, &count[0], time_data)))
-      ERR(retval);
-   if ((retval = nc_put_vara_float(ncid, temp_varid, start, count, &temp_data[0][0][0])))
-      ERR(retval);
+   size_t count[3] = {1, NLAT, NLON};
+   size_t time_count[1] = {1};
+   for (int t = 0; t < INITIAL_TIMESTEPS; t++) {
+      start[0] = t;
+      if ((retval = nc_put_vara_float(ncid, time_varid, start, time_count,
+                                       &time_data[t])))
+         ERR(retval);
+      if ((retval = nc_put_vara_float(ncid, temp_varid, start, count,
+                                       &temp_data[t][0][0])))
+         ERR(retval);
+   }
    
    /* Close the file */
    if ((retval = nc_close(ncid)))
@@ -166,16 +172,16 @@ int main()
    }
    printf("Current time dimension size: %zu\n", current_size);
    
-   /* Append additional timesteps (3, 4) */
-   start[0] = INITIAL_TIMESTEPS;
-   count[0] = APPEND_TIMESTEPS;
-   
-   if ((retval = nc_put_vara_float(ncid, time_varid, start, &count[0], 
-                                     &time_data[INITIAL_TIMESTEPS])))
-      ERR(retval);
-   if ((retval = nc_put_vara_float(ncid, temp_varid, start, count, 
-                                     &temp_data[INITIAL_TIMESTEPS][0][0])))
-      ERR(retval);
+   /* Append additional data one timestep at a time. */
+   for (int t = INITIAL_TIMESTEPS; t < TOTAL_TIMESTEPS; t++) {
+      start[0] = t;
+      if ((retval = nc_put_vara_float(ncid, time_varid, start, time_count,
+                                       &time_data[t])))
+         ERR(retval);
+      if ((retval = nc_put_vara_float(ncid, temp_varid, start, count,
+                                       &temp_data[t][0][0])))
+         ERR(retval);
+   }
    
    /* Close the file */
    if ((retval = nc_close(ncid)))
@@ -212,10 +218,17 @@ int main()
    }
    printf("Verified: %zu total timesteps after append\n", final_size);
    
-   /* Read all time values */
+   /* Read all data one timestep at a time. */
    float time_in[TOTAL_TIMESTEPS];
-   if ((retval = nc_get_var_float(ncid, time_varid, time_in)))
-      ERR(retval);
+   for (int t = 0; t < TOTAL_TIMESTEPS; t++) {
+      start[0] = t;
+      if ((retval = nc_get_vara_float(ncid, time_varid, start, time_count,
+                                       &time_in[t])))
+         ERR(retval);
+      if ((retval = nc_get_vara_float(ncid, temp_varid, start, count,
+                                       &temp_in[t][0][0])))
+         ERR(retval);
+   }
    
    /* Verify time values */
    int errors = 0;
@@ -234,10 +247,6 @@ int main()
       }
       printf("]\n");
    }
-   
-   /* Read all temperature data */
-   if ((retval = nc_get_var_float(ncid, temp_varid, &temp_in[0][0][0])))
-      ERR(retval);
    
    /* Verify temperature data continuity */
    for (int t = 0; t < TOTAL_TIMESTEPS; t++) {

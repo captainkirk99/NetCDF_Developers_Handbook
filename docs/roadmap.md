@@ -2,6 +2,8 @@
 
 ## Version 1.1 - Use get_vara/put_vara in Several Examples
 
+Status: implementation and documentation complete; tag `v1.1` after merge.
+
 ### Goal
 
 Most of the example programs use `nc_put_var_*()` and `nc_get_var_*()` to write and read entire netCDF variables in one call. This is simple and works well for the small data in the examples, but is not how most real code looks. We need to use the vara versions, with explicit `start`/`count` arrays, in enough examples that readers see the pattern.
@@ -38,25 +40,25 @@ No build-system, CI, or dependency changes are needed.
 
 ### Sprints
 
-#### Sprint 1 - var4d C and Fortran
+#### Sprint 1 - var4d C and Fortran (done)
 
 Convert the clearest multi-dimensional example to vara calls. `var4d.c` currently writes and reads three variables (2D, 3D, 4D) with whole-variable calls; `f_var4d.f90` is the same.
 
 Deliverables: `var4d.c` and `f_var4d.f90` use explicit `start`/`count` arrays for every write and read; both tests pass under `ctest`.
 
-#### Sprint 2 - compression C and Fortran
+#### Sprint 2 - compression C and Fortran (done)
 
 Complete the vara pattern in the compression example. The write side already uses `nc_put_vara_float` (C) and `nf90_put_var` with `start`/`count` (Fortran); only the read side and the zstd availability probe still use whole-variable calls.
 
 Deliverables: `compression.c` and `f_compression.f90` read back data with vara calls; the zstd probe in `compression.c` also uses vara.
 
-#### Sprint 3 - simple_2D and unlimited_dim C and Fortran
+#### Sprint 3 - simple_2D and unlimited_dim C and Fortran (done)
 
 Convert two examples that already use vara for writing so they also use vara for reading.
 
 Deliverables: `simple_2D.c`, `f_simple_2D.f90`, `unlimited_dim.c`, and `f_unlimited_dim.f90` use vara calls for both writes and reads.
 
-#### Sprint 4 - Documentation and v1.1 release
+#### Sprint 4 - Documentation and v1.1 release (documentation done; release pending merge)
 
 Update the examples table to highlight which programs demonstrate `start`/`count` arrays, then tag the release.
 
@@ -125,14 +127,12 @@ Scope: `examples/classic/simple_2D.c`, `examples/f_classic/f_simple_2D.f90`, `ex
    - Replace the read `nf90_get_var(ncid, varid, data_in)` with `nf90_get_var(ncid, varid, data_in, start=start_idx, count=count_idx)` where `start_idx=(/1,1/)` and `count_idx=(/NX,NY/)`.
    - Update the docstring learning objectives.
 3. **unlimited_dim.c**
-   - The writes already use `nc_put_vara_float`; leave them unchanged.
-   - Replace the read of the `time` coordinate with `nc_get_vara_float` using `start={0}` and `count={TOTAL_TIMESTEPS}`.
-   - Replace the read of `temperature` with `nc_get_vara_float` using `start={0,0,0}` and `count={TOTAL_TIMESTEPS,NLAT,NLON}`.
-   - Update the `@brief` to mention reads use `start`/`count` too.
+   - Change the initial and append writes to loop over time with `count={1,NLAT,NLON}`; write the time coordinate one value per call too.
+   - Read the time coordinate and temperature in the same loop, one timestep per call.
+   - Update the `@brief` to mention timestep-at-a-time I/O with `start`/`count`.
 4. **f_unlimited_dim.f90**
-   - The writes already use `nf90_put_var(..., start=..., count=...)`; leave them unchanged.
-   - Replace the read of `time` with `nf90_get_var(ncid, time_varid, time_in, start=(/1/), count=(/TOTAL_TIMESTEPS/))`.
-   - Replace the read of `temperature` with `nf90_get_var(ncid, temp_varid, temp_in, start=(/1,1,1/), count=(/NLON,NLAT,TOTAL_TIMESTEPS/))`.
+   - Change the initial and append writes to loop over time with `count=(/NLON,NLAT,1/)`; write the time coordinate one value per call too.
+   - Read the time coordinate and temperature in the same loop, one timestep per call.
    - Update the docstring learning objectives.
 5. **Local verification**
    - `ctest --test-dir build --output-on-failure`

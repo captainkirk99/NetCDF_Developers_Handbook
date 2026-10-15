@@ -24,6 +24,7 @@
  * - Learn dimension and variable definition workflow
  * - Add global and variable attributes
  * - Master data writing and reading operations
+ * - Use nc_put_vara_*() and nc_get_vara_*() with explicit start/count arrays
  * - Query file metadata with nc_inq(), nc_inq_dim(), and nc_inq_var()
  * - Implement error handling patterns with nc_strerror()
  * - Verify metadata, attribute, and data integrity
@@ -232,8 +233,11 @@ int main()
    }
    printf("Verified: all attributes and fill value correct\n");
    
-   /* Read the data back */
-   if ((retval = nc_get_var_int(ncid, varid, &data_in[0][0])))
+   /* Read the data back with an explicit selection. */
+   size_t read_start[NDIMS] = {0, 0};
+   size_t read_count[NDIMS] = {NY, NX};
+   if ((retval = nc_get_vara_int(ncid, varid, read_start, read_count,
+                                  &data_in[0][0])))
       ERR(retval);
    
    /* Verify written rows (0 .. NY-2) contain expected sequential values */
