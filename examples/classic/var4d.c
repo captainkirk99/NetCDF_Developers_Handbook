@@ -16,6 +16,7 @@
  * - Understand multi-dimensional array indexing in NetCDF
  * - Learn dimension reuse across multiple variables
  * - Master 4D array creation and access patterns
+ * - Use nc_put_vara_*() and nc_get_vara_*() with explicit start/count arrays
  * - Work with atmospheric/oceanographic data structures
  * - Understand C row-major vs NetCDF dimension ordering
  *
@@ -78,6 +79,9 @@
 #define NLEVEL 2
 #define NLAT 4
 #define NLON 5
+#define DIM2 2
+#define DIM3 3
+#define DIM4 4
 #define ERRCODE 2
 #define ERR(e) {printf("Error: %s\n", nc_strerror(e)); exit(ERRCODE);}
 
@@ -156,12 +160,22 @@ int main()
    if ((retval = nc_enddef(ncid)))
       ERR(retval);
    
-   /* Write the data */
-   if ((retval = nc_put_var_float(ncid, varid_2d, &temp_surface[0][0])))
+   /* Write the data. The start/count arrays select the portion of each
+    * variable to write; here they select each complete variable. */
+   size_t start_2d[DIM2] = {0, 0};
+   size_t count_2d[DIM2] = {NLAT, NLON};
+   size_t start_3d[DIM3] = {0, 0, 0};
+   size_t count_3d[DIM3] = {NTIME, NLAT, NLON};
+   size_t start_4d[DIM4] = {0, 0, 0, 0};
+   size_t count_4d[DIM4] = {NTIME, NLEVEL, NLAT, NLON};
+   if ((retval = nc_put_vara_float(ncid, varid_2d, start_2d, count_2d,
+                                    &temp_surface[0][0])))
       ERR(retval);
-   if ((retval = nc_put_var_float(ncid, varid_3d, &temp_profile[0][0][0])))
+   if ((retval = nc_put_vara_float(ncid, varid_3d, start_3d, count_3d,
+                                    &temp_profile[0][0][0])))
       ERR(retval);
-   if ((retval = nc_put_var_float(ncid, varid_4d, &temp_3d[0][0][0][0])))
+   if ((retval = nc_put_vara_float(ncid, varid_4d, start_4d, count_4d,
+                                    temp_3d)))
       ERR(retval);
    
    /* Close the file */
@@ -243,12 +257,15 @@ int main()
    }
    printf("Verified: temp_3d is 4D NC_FLOAT\n");
    
-   /* Read the data back */
-   if ((retval = nc_get_var_float(ncid, varid_2d, &temp_surface_in[0][0])))
+   /* Read the data back using the same selections used for writing. */
+   if ((retval = nc_get_vara_float(ncid, varid_2d, start_2d, count_2d,
+                                    &temp_surface_in[0][0])))
       ERR(retval);
-   if ((retval = nc_get_var_float(ncid, varid_3d, &temp_profile_in[0][0][0])))
+   if ((retval = nc_get_vara_float(ncid, varid_3d, start_3d, count_3d,
+                                    &temp_profile_in[0][0][0])))
       ERR(retval);
-   if ((retval = nc_get_var_float(ncid, varid_4d, &temp_3d_in[0][0][0][0])))
+   if ((retval = nc_get_vara_float(ncid, varid_4d, start_4d, count_4d,
+                                    &temp_3d_in[0][0][0][0])))
       ERR(retval);
    
    /* Verify data correctness */

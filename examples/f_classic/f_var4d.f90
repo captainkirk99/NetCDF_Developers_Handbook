@@ -11,6 +11,7 @@
 !! - Understand Fortran column-major array ordering for 4D data
 !! - Learn dimension ordering reversal between Fortran and C
 !! - Master multi-dimensional array indexing in Fortran
+!! - Use nf90_put_var and nf90_get_var with explicit start/count arrays
 !! - Work with atmospheric/oceanographic data structures
 !!
 !! **Critical Fortran vs C Difference:**
@@ -53,10 +54,14 @@ program f_var4d
    
    character(len=*), parameter :: FILE_NAME = "f_var4d.nc"
    integer, parameter :: NTIME = 3, NLEVEL = 2, NLAT = 4, NLON = 5
+   integer, parameter :: DIM2 = 2, DIM3 = 3, DIM4 = 4
    
    integer :: ncid, varid_2d, varid_3d, varid_4d
    integer :: time_dimid, level_dimid, lat_dimid, lon_dimid
    integer :: dimids_2d(2), dimids_3d(3), dimids_4d(4)
+   integer :: start_2d(DIM2), count_2d(DIM2)
+   integer :: start_3d(DIM3), count_3d(DIM3)
+   integer :: start_4d(DIM4), count_4d(DIM4)
    integer :: retval
    
    real :: temp_surface(NLON, NLAT)
@@ -145,12 +150,21 @@ program f_var4d
    retval = nf90_enddef(ncid)
    if (retval /= nf90_noerr) call handle_err(retval)
    
-   ! Write the data
-   retval = nf90_put_var(ncid, varid_2d, temp_surface)
+   ! Write the data. The start/count arrays select each complete variable.
+   start_2d = (/1, 1/)
+   count_2d = (/NLON, NLAT/)
+   start_3d = (/1, 1, 1/)
+   count_3d = (/NLON, NLAT, NTIME/)
+   start_4d = (/1, 1, 1, 1/)
+   count_4d = (/NLON, NLAT, NLEVEL, NTIME/)
+   retval = nf90_put_var(ncid, varid_2d, temp_surface, &
+        start=start_2d, count=count_2d)
    if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_put_var(ncid, varid_3d, temp_profile)
+   retval = nf90_put_var(ncid, varid_3d, temp_profile, &
+        start=start_3d, count=count_3d)
    if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_put_var(ncid, varid_4d, temp_3d)
+   retval = nf90_put_var(ncid, varid_4d, temp_3d, &
+        start=start_4d, count=count_4d)
    if (retval /= nf90_noerr) call handle_err(retval)
    
    ! Close the file
@@ -236,12 +250,15 @@ program f_var4d
    end if
    print *, "Verified: temp_3d is 4D NF90_FLOAT"
    
-   ! Read the data back
-   retval = nf90_get_var(ncid, varid_2d, temp_surface_in)
+   ! Read the data back using the same selections used for writing.
+   retval = nf90_get_var(ncid, varid_2d, temp_surface_in, &
+        start=start_2d, count=count_2d)
    if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_get_var(ncid, varid_3d, temp_profile_in)
+   retval = nf90_get_var(ncid, varid_3d, temp_profile_in, &
+        start=start_3d, count=count_3d)
    if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_get_var(ncid, varid_4d, temp_3d_in)
+   retval = nf90_get_var(ncid, varid_4d, temp_3d_in, &
+        start=start_4d, count=count_4d)
    if (retval /= nf90_noerr) call handle_err(retval)
    
    ! Verify data correctness
