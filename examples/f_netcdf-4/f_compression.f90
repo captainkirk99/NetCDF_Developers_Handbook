@@ -12,6 +12,7 @@
 !! - Measure compression performance in Fortran applications
 !! - Select appropriate compression levels for different data
 !! - Set fill values with nf90_def_var_fill() for chunked/compressed variables
+!! - Use nf90_put_var and nf90_get_var with explicit start/count arrays
 !! - Verify that unwritten chunks return the fill value on read
 !!
 !! **Fortran Compression Functions:**
@@ -235,7 +236,7 @@ contains
       integer :: ncid, varid
       integer :: time_dimid, lat_dimid, lon_dimid
       integer :: dimids(NDIMS)
-      integer :: retval
+      integer :: retval, t
       integer(int64) :: start_count, end_count, count_rate
       integer :: start_idx(NDIMS), count_idx(NDIMS)
       integer :: chunksizes(NDIMS)
@@ -290,16 +291,16 @@ contains
       retval = nf90_enddef(ncid)
       if (retval /= nf90_noerr) call handle_err(retval)
       
-      ! Write all time steps except the last one (partial write).
-      ! The unwritten last time step will return FILL_VALUE when read back,
-      ! demonstrating fill value behavior with chunked/compressed storage.
-      ! Fortran dim order: (lon, lat, time); omit last time index.
+      ! Write all time steps except the last one, one timestep per call.
+      ! The unwritten last time step will return FILL_VALUE when read back.
       start_idx = (/ 1, 1, 1 /)
-      count_idx = (/ NLON, NLAT, NTIME - 1 /)
-      retval = nf90_put_var(ncid, varid, &
-           data(:,:,1:NTIME-1), &
-           start=start_idx, count=count_idx)
-      if (retval /= nf90_noerr) call handle_err(retval)
+      count_idx = (/ NLON, NLAT, 1 /)
+      do t = 1, NTIME - 1
+         start_idx(3) = t
+         retval = nf90_put_var(ncid, varid, data(:,:,t:t), &
+              start=start_idx, count=count_idx)
+         if (retval /= nf90_noerr) call handle_err(retval)
+      end do
       
       retval = nf90_close(ncid)
       if (retval /= nf90_noerr) call handle_err(retval)
@@ -325,8 +326,9 @@ contains
       real, allocatable :: data(:,:,:)
       integer :: shuffle, deflate, deflate_level
       integer :: zstd, zstd_level
-      integer :: errors, i
+      integer :: errors, i, t
       integer :: no_fill
+      integer :: start_idx(NDIMS), count_idx(NDIMS)
       real :: fill_value_in
       
       allocate(data(NLON, NLAT, NTIME))
@@ -370,8 +372,14 @@ contains
          stop 2
       end if
       
-      retval = nf90_get_var(ncid, varid, data)
-      if (retval /= nf90_noerr) call handle_err(retval)
+      start_idx = (/ 1, 1, 1 /)
+      count_idx = (/ NLON, NLAT, 1 /)
+      do t = 1, NTIME
+         start_idx(3) = t
+         retval = nf90_get_var(ncid, varid, data(:,:,t:t), &
+              start=start_idx, count=count_idx)
+         if (retval /= nf90_noerr) call handle_err(retval)
+      end do
       
       retval = nf90_close(ncid)
       if (retval /= nf90_noerr) call handle_err(retval)

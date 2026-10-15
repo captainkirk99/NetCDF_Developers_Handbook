@@ -30,7 +30,7 @@ No build-system, CI, or dependency changes are needed.
 ### Design decisions
 
 - Keep file names, created `.nc` files, console output, and validation logic identical. Only the API calls and the surrounding comments change.
-- Declare `size_t start[ndims]` and `size_t count[ndims]` at the point of use, even when the start is all zeros and the count is the full dimension length. This makes the vara pattern visible.
+- Declare `size_t start[ndims]` and `size_t count[ndims]` at the point of use. For variables with a time dimension, set the time count to one and loop over timesteps so each vara call transfers one timestep.
 - For partial-write examples (`simple_2D`, `compression`, `unlimited_dim`) keep the existing subset semantics on write and use a matching `start`/`count` on read.
 - For Fortran use 1-based `start_idx` and `count_idx` arrays, consistent with the naming already in `f_compression.f90` and `f_simple_2D.f90`.
 - Update the `@brief` block and learning objectives of each converted file to mention `start`/`count` arrays and the vara API.
@@ -68,18 +68,18 @@ Scope: `examples/classic/var4d.c` and `examples/f_classic/f_var4d.f90`.
 
 1. **var4d.c**
    - Replace the three `nc_put_var_float` calls with `nc_put_vara_float` using:
-     - 2D `temp_surface`: `start={0,0}`, `count={NLAT,NLON}`
-     - 3D `temp_profile`: `start={0,0,0}`, `count={NTIME,NLAT,NLON}`
-     - 4D `temp_3d`: `start={0,0,0,0}`, `count={NTIME,NLEVEL,NLAT,NLON}`
-   - Replace the three `nc_get_var_float` calls with matching `nc_get_vara_float` calls using the same start/count arrays.
-   - Add a short comment above the write block explaining that `start`/`count` select the subset being written (here, the whole variable).
+     - 2D `temp_surface`: one call with `start={0,0}`, `count={NLAT,NLON}`
+     - 3D `temp_profile`: loop over time with `count={1,NLAT,NLON}`
+     - 4D `temp_3d`: loop over time with `count={1,NLEVEL,NLAT,NLON}`
+   - Replace the three `nc_get_var_float` calls with matching `nc_get_vara_float` calls, reading time-dependent variables one timestep per call.
+   - Add a short comment above each I/O block explaining the timestep-at-a-time access pattern.
    - Update the `@brief` learning objectives to include using `nc_put_vara_*` / `nc_get_vara_*` with explicit `start`/`count` arrays.
 2. **f_var4d.f90**
    - Replace the three `nf90_put_var` calls with `nf90_put_var(..., start=..., count=...)` using 1-based arrays:
-     - 2D `temp_surface`: `start_idx=(/1,1/)`, `count_idx=(/NLON,NLAT/)`
-     - 3D `temp_profile`: `start_idx=(/1,1,1/)`, `count_idx=(/NLON,NLAT,NTIME/)`
-     - 4D `temp_3d`: `start_idx=(/1,1,1,1/)`, `count_idx=(/NLON,NLAT,NLEVEL,NTIME/)`
-   - Replace the three `nf90_get_var` calls similarly.
+     - 2D `temp_surface`: one call with `count_idx=(/NLON,NLAT/)`
+     - 3D `temp_profile`: loop over time with `count_idx=(/NLON,NLAT,1/)`
+     - 4D `temp_3d`: loop over time with `count_idx=(/NLON,NLAT,NLEVEL,1/)`
+   - Replace the three `nf90_get_var` calls similarly, reading one timestep per call.
    - Update the docstring learning objectives.
 3. **Local verification**
    - `cmake --build build && ctest --test-dir build --output-on-failure`
@@ -94,11 +94,13 @@ Definition of done for Sprint 1: `var4d` and `f_var4d` tests pass locally and in
 Scope: `examples/netcdf-4/compression.c` and `examples/f_netcdf-4/f_compression.f90`.
 
 1. **compression.c**
-   - In `read_compressed_file`, replace `nc_get_var_float(ncid, varid, data)` with `nc_get_vara_float` using `start={0,0,0}` and `count={NTIME,NLAT,NLON}`. The full read still returns `FILL_VALUE` for the unwritten last timestep, so the existing fill-value validation is unchanged.
+   - In `create_compressed_file`, write the first `NTIME-1` records in a loop with `count={1,NLAT,NLON}`, leaving the final timestep unwritten.
+   - In `read_compressed_file`, replace `nc_get_var_float` with a loop of `nc_get_vara_float` calls using `count={1,NLAT,NLON}`. Reading the final timestep still returns `FILL_VALUE`.
    - In `check_zstd_support`, replace the single-element `nc_put_var_float` and `nc_get_var_float` with `nc_put_vara_float` / `nc_get_vara_float` using `start={0}` and `count={1}`.
-   - Update the `@brief` to note that even full-variable reads are done with `nc_get_vara_*` so the pattern stays consistent with the partial write.
+   - Update the `@brief` to describe timestep-at-a-time I/O.
 2. **f_compression.f90**
-   - In `read_compressed_file`, replace `nf90_get_var(ncid, varid, data)` with `nf90_get_var(ncid, varid, data, start=start_idx, count=count_idx)` where `start_idx=(/1,1,1/)` and `count_idx=(/NLON,NLAT,NTIME/)`.
+   - In `create_compressed_file`, write the first `NTIME-1` records in a loop with `count_idx=(/NLON,NLAT,1/)`.
+   - In `read_compressed_file`, read all records in a loop with `count_idx=(/NLON,NLAT,1/)`.
    - The zstd probe there is compile-time guarded (`#ifdef HAVE_NF90_ZSTANDARD`) and only checks define-time calls; leave it as-is unless it is expanded to do I/O, in which case use vara calls.
    - Update the docstring learning objectives.
 3. **Local verification**

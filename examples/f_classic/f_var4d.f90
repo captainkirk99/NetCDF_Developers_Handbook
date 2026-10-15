@@ -150,22 +150,26 @@ program f_var4d
    retval = nf90_enddef(ncid)
    if (retval /= nf90_noerr) call handle_err(retval)
    
-   ! Write the data. The start/count arrays select each complete variable.
+   ! Write the time-dependent variables one timestep at a time.
    start_2d = (/1, 1/)
    count_2d = (/NLON, NLAT/)
    start_3d = (/1, 1, 1/)
-   count_3d = (/NLON, NLAT, NTIME/)
+   count_3d = (/NLON, NLAT, 1/)
    start_4d = (/1, 1, 1, 1/)
-   count_4d = (/NLON, NLAT, NLEVEL, NTIME/)
+   count_4d = (/NLON, NLAT, NLEVEL, 1/)
    retval = nf90_put_var(ncid, varid_2d, temp_surface, &
         start=start_2d, count=count_2d)
    if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_put_var(ncid, varid_3d, temp_profile, &
-        start=start_3d, count=count_3d)
-   if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_put_var(ncid, varid_4d, temp_3d, &
-        start=start_4d, count=count_4d)
-   if (retval /= nf90_noerr) call handle_err(retval)
+   do t = 1, NTIME
+      start_3d(3) = t
+      retval = nf90_put_var(ncid, varid_3d, temp_profile(:,:,t:t), &
+           start=start_3d, count=count_3d)
+      if (retval /= nf90_noerr) call handle_err(retval)
+      start_4d(4) = t
+      retval = nf90_put_var(ncid, varid_4d, temp_3d(:,:,:,t:t), &
+           start=start_4d, count=count_4d)
+      if (retval /= nf90_noerr) call handle_err(retval)
+   end do
    
    ! Close the file
    retval = nf90_close(ncid)
@@ -250,16 +254,20 @@ program f_var4d
    end if
    print *, "Verified: temp_3d is 4D NF90_FLOAT"
    
-   ! Read the data back using the same selections used for writing.
+   ! Read the time-dependent variables one timestep at a time.
    retval = nf90_get_var(ncid, varid_2d, temp_surface_in, &
         start=start_2d, count=count_2d)
    if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_get_var(ncid, varid_3d, temp_profile_in, &
-        start=start_3d, count=count_3d)
-   if (retval /= nf90_noerr) call handle_err(retval)
-   retval = nf90_get_var(ncid, varid_4d, temp_3d_in, &
-        start=start_4d, count=count_4d)
-   if (retval /= nf90_noerr) call handle_err(retval)
+   do t = 1, NTIME
+      start_3d(3) = t
+      retval = nf90_get_var(ncid, varid_3d, temp_profile_in(:,:,t:t), &
+           start=start_3d, count=count_3d)
+      if (retval /= nf90_noerr) call handle_err(retval)
+      start_4d(4) = t
+      retval = nf90_get_var(ncid, varid_4d, temp_3d_in(:,:,:,t:t), &
+           start=start_4d, count=count_4d)
+      if (retval /= nf90_noerr) call handle_err(retval)
+   end do
    
    ! Verify data correctness
    errors = 0
