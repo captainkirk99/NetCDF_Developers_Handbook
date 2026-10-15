@@ -1,12 +1,161 @@
-# Roadmap
+# Roadmap for NetCDF Developers Handbook
 
 ## Version 1.1 - Use get_vara/put_vara in Several Examples
 
+Status: implementation and documentation complete; tag `v1.1` after merge.
+
 ### Goal
 
-Most of the example programs use nc_put_var_*() and nc_get_var_*() to write and read entire netCDF variables in one call. This is simple and works well for the small data in the examples, but is not how most code looks. We need to use the vara versions, with start/count arrays.
+Most of the example programs use `nc_put_var_*()` and `nc_get_var_*()` to write and read entire netCDF variables in one call. This is simple and works well for the small data in the examples, but is not how most real code looks. We need to use the vara versions, with explicit `start`/`count` arrays, in enough examples that readers see the pattern.
 
-We don't need to change every example, just a few characteristic ones, including var4d.c and compression.c (and the Fortran equivalents.
+We do not need to change every example, only a few characteristic ones. The conversions must keep the same file names, output files, and validation logic so the existing CI tests continue to pass unchanged.
+
+### Scope
+
+Convert these programs from whole-variable calls to `nc_put_vara_*` / `nc_get_vara_*` (C) and to `nf90_put_var` / `nf90_get_var` with explicit `start` and `count` arguments (Fortran):
+
+- `examples/classic/var4d.c` and `examples/f_classic/f_var4d.f90`
+- `examples/netcdf-4/compression.c` and `examples/f_netcdf-4/f_compression.f90`
+- `examples/classic/simple_2D.c` and `examples/f_classic/f_simple_2D.f90`
+- `examples/classic/unlimited_dim.c` and `examples/f_classic/f_unlimited_dim.f90`
+
+Leave these unchanged:
+
+- Metadata-dump examples (`dump_classic_metadata.c`, `dump_nc4_metadata.c`): they read whole files by design.
+- Group and user-type examples (`groups.c`, `user_types.c`): the vara API is not the point of these.
+- The smallest examples (`quickstart.c`, `coord.c`, `coord_vars.c`): whole-variable calls are clearer at that level.
+- `performance/` examples: they already demonstrate chunked/filtered I/O and are large enough that a vara conversion would be cosmetic.
+- NcZarr, OPeNDAP and parallel I/O examples: out of scope for this release.
+
+No build-system, CI, or dependency changes are needed.
+
+### Design decisions
+
+- Keep file names, created `.nc` files, console output, and validation logic identical. Only the API calls and the surrounding comments change.
+- Declare `size_t start[ndims]` and `size_t count[ndims]` at the point of use. For variables with a time dimension, set the time count to one and loop over timesteps so each vara call transfers one timestep.
+- For partial-write examples (`simple_2D`, `compression`, `unlimited_dim`) keep the existing subset semantics on write and use a matching `start`/`count` on read.
+- For Fortran use 1-based `start_idx` and `count_idx` arrays, consistent with the naming already in `f_compression.f90` and `f_simple_2D.f90`.
+- Update the `@brief` block and learning objectives of each converted file to mention `start`/`count` arrays and the vara API.
+- No new tests: the converted programs must still exit 0 under the existing `ctest` registration.
+
+### Sprints
+
+#### Sprint 1 - var4d C and Fortran (done)
+
+Convert the clearest multi-dimensional example to vara calls. `var4d.c` currently writes and reads three variables (2D, 3D, 4D) with whole-variable calls; `f_var4d.f90` is the same.
+
+Deliverables: `var4d.c` and `f_var4d.f90` use explicit `start`/`count` arrays for every write and read; both tests pass under `ctest`.
+
+#### Sprint 2 - compression C and Fortran (done)
+
+Complete the vara pattern in the compression example. The write side already uses `nc_put_vara_float` (C) and `nf90_put_var` with `start`/`count` (Fortran); only the read side and the zstd availability probe still use whole-variable calls.
+
+Deliverables: `compression.c` and `f_compression.f90` read back data with vara calls; the zstd probe in `compression.c` also uses vara.
+
+#### Sprint 3 - simple_2D and unlimited_dim C and Fortran (done)
+
+Convert two examples that already use vara for writing so they also use vara for reading.
+
+Deliverables: `simple_2D.c`, `f_simple_2D.f90`, `unlimited_dim.c`, and `f_unlimited_dim.f90` use vara calls for both writes and reads.
+
+#### Sprint 4 - Documentation and v1.1 release (documentation done; release pending merge)
+
+Update the examples table to highlight which programs demonstrate `start`/`count` arrays, then tag the release.
+
+Deliverables: `examples/README.md` updated, roadmap marked done, `v1.1` tag created after merge.
+
+### Sprint 1 plan
+
+Scope: `examples/classic/var4d.c` and `examples/f_classic/f_var4d.f90`.
+
+1. **var4d.c**
+   - Replace the three `nc_put_var_float` calls with `nc_put_vara_float` using:
+     - 2D `temp_surface`: one call with `start={0,0}`, `count={NLAT,NLON}`
+     - 3D `temp_profile`: loop over time with `count={1,NLAT,NLON}`
+     - 4D `temp_3d`: loop over time with `count={1,NLEVEL,NLAT,NLON}`
+   - Replace the three `nc_get_var_float` calls with matching `nc_get_vara_float` calls, reading time-dependent variables one timestep per call.
+   - Add a short comment above each I/O block explaining the timestep-at-a-time access pattern.
+   - Update the `@brief` learning objectives to include using `nc_put_vara_*` / `nc_get_vara_*` with explicit `start`/`count` arrays.
+2. **f_var4d.f90**
+   - Replace the three `nf90_put_var` calls with `nf90_put_var(..., start=..., count=...)` using 1-based arrays:
+     - 2D `temp_surface`: one call with `count_idx=(/NLON,NLAT/)`
+     - 3D `temp_profile`: loop over time with `count_idx=(/NLON,NLAT,1/)`
+     - 4D `temp_3d`: loop over time with `count_idx=(/NLON,NLAT,NLEVEL,1/)`
+   - Replace the three `nf90_get_var` calls similarly, reading one timestep per call.
+   - Update the docstring learning objectives.
+3. **Local verification**
+   - `cmake --build build && ctest --test-dir build --output-on-failure`
+   - `var4d` and `f_var4d` pass and produce identical `var4d.nc` / `f_var4d.nc` files as before.
+4. **CI**
+   - Existing workflow runs the modified tests; no workflow changes needed.
+
+Definition of done for Sprint 1: `var4d` and `f_var4d` tests pass locally and in CI, and both sources use explicit `start`/`count` arrays for all I/O.
+
+### Sprint 2 plan
+
+Scope: `examples/netcdf-4/compression.c` and `examples/f_netcdf-4/f_compression.f90`.
+
+1. **compression.c**
+   - In `create_compressed_file`, write the first `NTIME-1` records in a loop with `count={1,NLAT,NLON}`, leaving the final timestep unwritten.
+   - In `read_compressed_file`, replace `nc_get_var_float` with a loop of `nc_get_vara_float` calls using `count={1,NLAT,NLON}`. Reading the final timestep still returns `FILL_VALUE`.
+   - In `check_zstd_support`, replace the single-element `nc_put_var_float` and `nc_get_var_float` with `nc_put_vara_float` / `nc_get_vara_float` using `start={0}` and `count={1}`.
+   - Update the `@brief` to describe timestep-at-a-time I/O.
+2. **f_compression.f90**
+   - In `create_compressed_file`, write the first `NTIME-1` records in a loop with `count_idx=(/NLON,NLAT,1/)`.
+   - In `read_compressed_file`, read all records in a loop with `count_idx=(/NLON,NLAT,1/)`.
+   - The zstd probe there is compile-time guarded (`#ifdef HAVE_NF90_ZSTANDARD`) and only checks define-time calls; leave it as-is unless it is expanded to do I/O, in which case use vara calls.
+   - Update the docstring learning objectives.
+3. **Local verification**
+   - Build and run `compression` and `f_compression`.
+   - Confirm the set of created files (`compress_*.nc`, `f_compress_*.nc`) and the results table are unchanged.
+   - `ctest --test-dir build --output-on-failure` passes for both.
+4. **CI**
+   - Existing workflow runs the modified tests; no workflow changes needed.
+
+Definition of done for Sprint 2: `compression` and `f_compression` tests pass locally and in CI, and all data I/O in them uses explicit `start`/`count`.
+
+### Sprint 3 plan
+
+Scope: `examples/classic/simple_2D.c`, `examples/f_classic/f_simple_2D.f90`, `examples/classic/unlimited_dim.c`, `examples/f_classic/f_unlimited_dim.f90`.
+
+1. **simple_2D.c**
+   - The write already uses `nc_put_vara_int` with `count={NY-1,NX}`; leave it unchanged.
+   - Replace the read `nc_get_var_int(ncid, varid, &data_in[0][0])` with `nc_get_vara_int` using `start={0,0}` and `count={NY,NX}`, so explicit subset selection is visible on both sides and the fill-value check on the unwritten last row still works.
+   - Update the `@brief` to note vara calls are used for both the partial write and the full read.
+2. **f_simple_2D.f90**
+   - The write already uses `nf90_put_var(..., start=start_idx, count=count_idx)`; leave it unchanged.
+   - Replace the read `nf90_get_var(ncid, varid, data_in)` with `nf90_get_var(ncid, varid, data_in, start=start_idx, count=count_idx)` where `start_idx=(/1,1/)` and `count_idx=(/NX,NY/)`.
+   - Update the docstring learning objectives.
+3. **unlimited_dim.c**
+   - Change the initial and append writes to loop over time with `count={1,NLAT,NLON}`; write the time coordinate one value per call too.
+   - Read the time coordinate and temperature in the same loop, one timestep per call.
+   - Update the `@brief` to mention timestep-at-a-time I/O with `start`/`count`.
+4. **f_unlimited_dim.f90**
+   - Change the initial and append writes to loop over time with `count=(/NLON,NLAT,1/)`; write the time coordinate one value per call too.
+   - Read the time coordinate and temperature in the same loop, one timestep per call.
+   - Update the docstring learning objectives.
+5. **Local verification**
+   - `ctest --test-dir build --output-on-failure`
+   - `simple_2D`, `f_simple_2D`, `unlimited_dim`, and `f_unlimited_dim` all pass.
+6. **CI**
+   - Existing workflow runs the modified tests; no workflow changes needed.
+
+Definition of done for Sprint 3: all four tests pass locally and in CI, and every write and read in them uses explicit `start`/`count` arrays.
+
+### Sprint 4 plan
+
+Scope: documentation and the v1.1 release. No source changes.
+
+1. **`examples/README.md`**
+   - In the `classic/` table, extend the `Demonstrates` column for `simple_2D`, `var4d`, and `unlimited_dim` to mention explicit `start`/`count` arrays (one short phrase per row, e.g. "2D integer array written and read with `start`/`count`").
+   - In the `netcdf-4/` table, update the `compression` row similarly.
+2. **Top-level README**
+   - Check the quick-start/description for any whole-variable wording and update it to match; keep the link to `examples/README.md`.
+3. **Release**
+   - Mark Version 1.1 done in this roadmap.
+   - After the final PR merges, tag `v1.1` on `main` and create a GitHub release pointing at it (done on request, as with v1.0).
+
+Definition of done for Sprint 4: documentation reflects the vara conversions, the roadmap shows Version 1.1 complete, and `v1.1` is tagged.
 
 ## Version 1.0 - Examples from the NetCDF Expansion Pack
 

@@ -16,6 +16,7 @@
 !! - Query file metadata with nf90_inquire(),
 !!   nf90_inquire_dimension(), nf90_inquire_variable()
 !! - Master error handling with nf90_noerr and nf90_strerror()
+!! - Use nf90_put_var and nf90_get_var with explicit start/count arrays
 !! - Work with Fortran array indexing (1-based vs C's 0-based)
 !! - Verify equivalence with C version (simple_2D.c)
 !!
@@ -250,8 +251,11 @@ program f_simple_2D
    end if
    print *, "Verified: all attributes and fill value correct"
    
-   ! Read the data back
-   retval = nf90_get_var(ncid, varid, data_in)
+   ! Read the data back with an explicit selection.
+   start_idx = (/ 1, 1 /)
+   count_idx = (/ NX, NY /)
+   retval = nf90_get_var(ncid, varid, data_in, &
+        start=start_idx, count=count_idx)
    if (retval /= nf90_noerr) call handle_err(retval)
    
    ! Verify written columns (1 .. NY-1) contain expected sequential values

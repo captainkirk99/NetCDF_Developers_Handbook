@@ -9,6 +9,7 @@
 !! **Learning Objectives:**
 !! - Understand NF90_UNLIMITED in Fortran
 !! - Learn to append data to existing files in Fortran
+!! - Read and write one timestep per call with explicit start/count arrays
 !! - Work with time-series data patterns in Fortran
 !! - Master file reopening with NF90_WRITE mode
 !!
@@ -111,18 +112,18 @@ program f_unlimited_dim
    retval = nf90_enddef(ncid)
    if (retval /= nf90_noerr) call handle_err(retval)
    
-   ! Write initial timesteps (0, 1, 2)
+   ! Write initial data one timestep at a time.
    start = (/1, 1, 1/)
-   count = (/INITIAL_TIMESTEPS, 1, 1/)
-   
-   retval = nf90_put_var(ncid, time_varid, time_data(1:INITIAL_TIMESTEPS), &
-                         start=start(1:1), count=count(1:1))
-   if (retval /= nf90_noerr) call handle_err(retval)
-   
-   count = (/NLON, NLAT, INITIAL_TIMESTEPS/)
-   retval = nf90_put_var(ncid, temp_varid, temp_data(:,:,1:INITIAL_TIMESTEPS), &
-                         start=start, count=count)
-   if (retval /= nf90_noerr) call handle_err(retval)
+   count = (/NLON, NLAT, 1/)
+   do t = 1, INITIAL_TIMESTEPS
+      start(3) = t
+      retval = nf90_put_var(ncid, time_varid, time_data(t:t), &
+                            start=start(3:3), count=count(3:3))
+      if (retval /= nf90_noerr) call handle_err(retval)
+      retval = nf90_put_var(ncid, temp_varid, temp_data(:,:,t:t), &
+                            start=start, count=count)
+      if (retval /= nf90_noerr) call handle_err(retval)
+   end do
    
    ! Close the file
    retval = nf90_close(ncid)
@@ -156,21 +157,16 @@ program f_unlimited_dim
    end if
    print *, "Current time dimension size: ", current_size
    
-   ! Append additional timesteps (3, 4)
-   start(1) = INITIAL_TIMESTEPS + 1
-   count(1) = APPEND_TIMESTEPS
-   
-   retval = nf90_put_var(ncid, time_varid, &
-                         time_data(INITIAL_TIMESTEPS+1:TOTAL_TIMESTEPS), &
-                         start=start(1:1), count=count(1:1))
-   if (retval /= nf90_noerr) call handle_err(retval)
-   
-   start = (/1, 1, INITIAL_TIMESTEPS + 1/)
-   count = (/NLON, NLAT, APPEND_TIMESTEPS/)
-   retval = nf90_put_var(ncid, temp_varid, &
-                         temp_data(:,:,INITIAL_TIMESTEPS+1:TOTAL_TIMESTEPS), &
-                         start=start, count=count)
-   if (retval /= nf90_noerr) call handle_err(retval)
+   ! Append additional data one timestep at a time.
+   do t = INITIAL_TIMESTEPS + 1, TOTAL_TIMESTEPS
+      start(3) = t
+      retval = nf90_put_var(ncid, time_varid, time_data(t:t), &
+                            start=start(3:3), count=count(3:3))
+      if (retval /= nf90_noerr) call handle_err(retval)
+      retval = nf90_put_var(ncid, temp_varid, temp_data(:,:,t:t), &
+                            start=start, count=count)
+      if (retval /= nf90_noerr) call handle_err(retval)
+   end do
    
    ! Close the file
    retval = nf90_close(ncid)
@@ -208,9 +204,18 @@ program f_unlimited_dim
    end if
    print *, "Verified: ", final_size, " total timesteps after append"
    
-   ! Read all time values
-   retval = nf90_get_var(ncid, time_varid, time_in)
-   if (retval /= nf90_noerr) call handle_err(retval)
+   ! Read all data one timestep at a time.
+   start = (/1, 1, 1/)
+   count = (/NLON, NLAT, 1/)
+   do t = 1, TOTAL_TIMESTEPS
+      start(3) = t
+      retval = nf90_get_var(ncid, time_varid, time_in(t:t), &
+                            start=start(3:3), count=count(3:3))
+      if (retval /= nf90_noerr) call handle_err(retval)
+      retval = nf90_get_var(ncid, temp_varid, temp_in(:,:,t:t), &
+                            start=start, count=count)
+      if (retval /= nf90_noerr) call handle_err(retval)
+   end do
    
    ! Verify time values
    errors = 0
@@ -228,10 +233,6 @@ program f_unlimited_dim
                time_in(1), ", ", time_in(2), ", ", time_in(3), ", ", &
                time_in(4), ", ", time_in(5), "]"
    end if
-   
-   ! Read all temperature data
-   retval = nf90_get_var(ncid, temp_varid, temp_in)
-   if (retval /= nf90_noerr) call handle_err(retval)
    
    ! Verify temperature data continuity
    do t = 1, TOTAL_TIMESTEPS

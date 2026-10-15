@@ -18,6 +18,7 @@
  * - Learn to configure compression with nc_def_var_deflate() and nc_def_var_zstandard()
  * - Master compression level selection (zlib 1-9, zstd 1-22 tradeoff)
  * - Measure compression performance (time, size, ratio)
+ * - Use nc_put_vara_*() and nc_get_vara_*() with explicit start/count arrays
  * - Make informed compression decisions for different data types
  *
  * **Key Concepts:**
@@ -211,13 +212,16 @@ void create_compressed_file(CompressionTest *test, float *data) {
     if ((retval = nc_enddef(ncid)))
         ERR(retval);
     
-    /* Write all time steps except the last one (partial write).
-     * The unwritten last time step will return FILL_VALUE when read back,
-     * demonstrating fill value behavior with chunked/compressed storage. */
+    /* Write all time steps except the last one (partial write), one timestep
+     * per call. The unwritten last time step will return FILL_VALUE. */
     size_t wstart[NDIMS] = {0, 0, 0};
-    size_t wcount[NDIMS] = {NTIME - 1, NLAT, NLON};
-    if ((retval = nc_put_vara_float(ncid, varid, wstart, wcount, data)))
-        ERR(retval);
+    size_t wcount[NDIMS] = {1, NLAT, NLON};
+    for (int t = 0; t < NTIME - 1; t++) {
+        wstart[0] = t;
+        if ((retval = nc_put_vara_float(ncid, varid, wstart, wcount,
+                                        &data[t * NLAT * NLON])))
+            ERR(retval);
+    }
     
     /* Close file */
     if ((retval = nc_close(ncid)))
@@ -285,9 +289,15 @@ void read_compressed_file(CompressionTest *test, float *original_data) {
         exit(ERRCODE);
     }
     
-    /* Read data */
-    if ((retval = nc_get_var_float(ncid, varid, data)))
-        ERR(retval);
+    /* Read one timestep at a time, including the unwritten final timestep. */
+    size_t rstart[NDIMS] = {0, 0, 0};
+    size_t rcount[NDIMS] = {1, NLAT, NLON};
+    for (int t = 0; t < NTIME; t++) {
+        rstart[0] = t;
+        if ((retval = nc_get_vara_float(ncid, varid, rstart, rcount,
+                                        &data[t * NLAT * NLON])))
+            ERR(retval);
+    }
     
     /* Close file */
     if ((retval = nc_close(ncid)))
@@ -336,6 +346,8 @@ int check_zstd_support(void) {
     int supported = 0;
     float val_out = 0, val_in = 1.5;
     int zstd_out = 0, zstd_level_out = 0;
+    size_t start[1] = {0};
+    size_t count[1] = {1};
 
     if ((retval = nc_create("zstd_probe.nc", NC_CLOBBER|NC_NETCDF4, &ncid)))
         return 0;
@@ -344,7 +356,7 @@ int check_zstd_support(void) {
         (retval = nc_def_var(ncid, "v", NC_FLOAT, 1, &dimid, &varid)) == NC_NOERR &&
         (retval = nc_def_var_zstandard(ncid, varid, 3)) == NC_NOERR &&
         (retval = nc_enddef(ncid)) == NC_NOERR)
-        retval = nc_put_var_float(ncid, varid, &val_in);
+        retval = nc_put_vara_float(ncid, varid, start, count, &val_in);
 
     if (nc_close(ncid) != NC_NOERR)
         retval = NC_EFILTER;
@@ -353,7 +365,7 @@ int check_zstd_support(void) {
         (retval = nc_open("zstd_probe.nc", NC_NOWRITE, &ncid)) == NC_NOERR) {
         if ((retval = nc_inq_varid(ncid, "v", &varid)) == NC_NOERR &&
             (retval = nc_inq_var_zstandard(ncid, varid, &zstd_out, &zstd_level_out)) == NC_NOERR &&
-            (retval = nc_get_var_float(ncid, varid, &val_out)) == NC_NOERR &&
+            (retval = nc_get_vara_float(ncid, varid, start, count, &val_out)) == NC_NOERR &&
             (!zstd_out || zstd_level_out != 3 || val_out != val_in))
             retval = NC_EFILTER;
         nc_close(ncid);
